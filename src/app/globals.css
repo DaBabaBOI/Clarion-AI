@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/*
+ * Clarion design tokens, taken from the Figma file "Clarion — Final Design
+ * (Strand 4)" and the Criterion B planning table: cool, bright surfaces with
+ * warm amber kept for urgency.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #14162b;
+  --color-muted: #6b7089;
+  --color-faint: #a3a7ba;
+  --color-line: #e6e9f1;
+  --color-canvas: #f7f8fc;
+
+  --color-brand: #6d5dfb;
+  --color-brand-soft: #efedff;
+  --color-brand-deep: #5c4af2;
+  --color-sky: #3b82f6;
+  --color-sky-soft: #e8f1ff;
+  --color-mint: #12b76a;
+  --color-mint-soft: #e5f8ee;
+  --color-amber: #ef8b09;
+  --color-amber-soft: #fff3e3;
+
+  --color-gold: #f2b325;
+  --color-gold-soft: #fff6dc;
+  --color-silver: #96a3b8;
+  --color-silver-soft: #eef1f5;
+  --color-bronze: #cd7e41;
+  --color-bronze-soft: #fbefe5;
+
+  --radius-card: 16px;
+  --radius-control: 10px;
+
+  --shadow-tab: 0 1px 3px 0 rgb(15 18 46 / 0.1);
+  --shadow-pop: 0 12px 32px -8px rgb(20 22 43 / 0.18);
+}
+
+@utility bg-brand-gradient {
+  background-image: linear-gradient(to right, var(--color-brand), var(--color-sky));
+}
+
+@utility bg-soft-gradient {
+  background-image: linear-gradient(to right, var(--color-brand-soft), var(--color-sky-soft));
+}
+
+@utility bg-calm-gradient {
+  background-image: linear-gradient(to right, var(--color-sky-soft), var(--color-mint-soft));
+}
+
+@utility text-brand-gradient {
+  background-image: linear-gradient(to right, var(--color-brand), var(--color-sky));
+  background-clip: text;
+  color: transparent;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+/* Logo draw-in used by the splash screen (Figma frames "Loading 00" to "16"). */
+@keyframes clarion-draw {
+  from {
+    stroke-dashoffset: var(--arc-length);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes clarion-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes clarion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes clarion-fade-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
