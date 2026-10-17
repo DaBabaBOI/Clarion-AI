@@ -14,7 +14,23 @@ npm run dev                  # http://localhost:3000
 
 `npm run build && npm start` for a production build. `npm run lint` before pushing.
 
-The app currently runs on **demo data** stored in the browser (`localStorage`), so every screen works without signing in. Dates are generated relative to today, so "Overdue", "Tomorrow" and the streak always read correctly. Use the avatar menu → **Reset demo data** to start over.
+There are two ways in:
+
+- **Sign in** with a school account. Everything is read from and written to Supabase as that user, so row level security decides what they see.
+- **Explore the demo** (link on the sign-in screen) runs on sample data stored in the browser, for presentations or trying Clarion without an account. Avatar menu → **Reset demo data** starts over.
+
+### Test school
+
+The `clarion-ai` project has a test school seeded by `supabase/seed/test_school.sql`:
+
+| Account | Role |
+| --- | --- |
+| `prithu1606@gmail.com` | Principal (admin) and teacher of all four classes |
+| `prithu1606+student@gmail.com` | Student (Year 9) in all four classes |
+
+Passwords were shared privately, not committed. Sign in as the student to hand work in; sign in as the teacher and open a class to **verify** it (that is the only way points are paid) or **set work** with points. Class codes: Biology `7K2H9B`, Maths `M9X4QT`, English `E9R2WK`, History `H9P7LN`.
+
+Google sign-in appears on the sign-in screen automatically once the Google provider is switched on in Supabase (Authentication → Providers → Google, redirect `https://miulgjlrdxzveufoxkmj.supabase.co/auth/v1/callback`, and add `http://localhost:3000/auth/callback` under URL Configuration).
 
 ## Screens
 
@@ -28,7 +44,7 @@ The app currently runs on **demo data** stored in the browser (`localStorage`), 
 | `/discussions` | Searchable, filterable inbox across classes; public and direct threads; reply composer |
 | `/road-to-glory` | Gamification, redesigned (see below) |
 
-The AI helper runs offline for now: study plans and quizzes are built from the student's own tasks and flashcards, and open questions get an honest "demo mode" reply. `src/lib/study-helper.ts` is the one place to swap in a real model.
+The AI helper uses **Gemini** through the `study-helper` Edge Function (`supabase/functions/study-helper`). It runs as the signed-in student, gives the model only that student's tasks, flashcards and class posts, returns the sources it actually used, stores every exchange for teacher review, and rate-limits to 8 questions a minute. It reads the `GEMINI_API_KEY` secret; set `GEMINI_MODEL` to pin a model (default `gemini-flash-latest`). Redeploy after edits with `supabase functions deploy study-helper --no-verify-jwt` (the function checks the user itself). In demo mode the helper answers offline from `src/lib/study-helper.ts`.
 
 ### Road to Glory changes
 
@@ -53,7 +69,8 @@ The schema is in `supabase/migrations`:
 | --- | --- |
 | `20261017043927_initial_schema.sql` | Applied |
 | `20261017044553_private_helpers.sql` | Applied |
-| `20261017050000_split_write_policies.sql` | **Pending.** Paste it into the Supabase SQL editor, or run `supabase db push`. It only clears a performance advisor warning. |
+| `20261017050659_classmates_leaderboard.sql` | Applied |
+| `20261017090000_split_write_policies.sql` | **Pending.** Paste it into the Supabase SQL editor, or run `supabase db push`. It only clears a performance advisor warning. |
 
 What the database enforces, regardless of what the browser does:
 
@@ -61,10 +78,10 @@ What the database enforces, regardless of what the browser does:
 - Personal reminders can never carry points.
 - Joining a class goes through `join_class(code)`; spending through `redeem_reward(id)`, which locks per student to stop double spending. Declined requests are refunded.
 - Direct threads are visible only to the author and the class teachers. Class teachers can review AI chats for safety; assistant replies can only be written by the server.
-- Policy helpers live in a `private` schema the API does not expose. The only callable functions are `join_class`, `redeem_reward`, `class_leaderboard` and `school_leaderboard`.
+- Policy helpers live in a `private` schema the API does not expose. The only callable functions are `join_class`, `redeem_reward`, `class_leaderboard`, `classmates_leaderboard` and `school_leaderboard`.
 - `posts` and `threads` are in the realtime publication for live discussions.
 
-Clients are ready in `src/lib/supabase/` (`client.ts` for the browser, `server.ts` for the server) with generated types in `database.types.ts`. The UI still reads the demo store (`src/lib/store.ts`); its action names match the database operations so the switch is contained to the data layer.
+Clients live in `src/lib/supabase/` with generated types in `database.types.ts`. `src/lib/live/load.ts` reads everything for the signed-in user and shapes it like the demo data, and `src/lib/store.ts` runs each action against the screen first, then the database, then reloads. New discussion posts arrive over Supabase Realtime.
 
 ## Project layout
 
@@ -75,10 +92,14 @@ src/
     sign-in/
   components/          UI by feature (dashboard, classes, ai, discussions, glory, shell)
   lib/
-    store.ts           demo store and actions
+    store.ts           store and actions (live or demo)
+    live/load.ts       reads the signed-in user's data from Supabase
     demo-data.ts       demo content, relative to today
     selectors.ts       derived numbers shared by every screen
     study-helper.ts    offline stand-in for the AI
     supabase/          Supabase clients and generated types
-supabase/migrations/   database schema and policies
+supabase/
+  migrations/          database schema and policies
+  functions/           study-helper Edge Function (Gemini)
+  seed/                test school content
 ```

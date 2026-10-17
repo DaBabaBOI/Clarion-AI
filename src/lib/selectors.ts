@@ -8,12 +8,14 @@ export function classById(state: AppState, id: string | null | undefined) {
   return state.classes.find((c) => c.id === id) ?? null;
 }
 
+/** Points from verified work, net of any undone verifications. Drives rank. */
 export function earnedPoints(state: AppState): number {
-  return state.ledger.filter((e) => e.points > 0).reduce((sum, e) => sum + e.points, 0);
+  return state.ledger.filter((e) => e.source === "task").reduce((sum, e) => sum + e.points, 0);
 }
 
+/** Points spent on rewards, net of refunds. */
 export function spentPoints(state: AppState): number {
-  return state.ledger.filter((e) => e.points < 0).reduce((sum, e) => sum - e.points, 0);
+  return state.ledger.filter((e) => e.source === "reward").reduce((sum, e) => sum - e.points, 0);
 }
 
 /** Points the student can still spend. Spending never lowers leaderboard rank. */
@@ -28,7 +30,7 @@ export function pendingPoints(state: AppState): number {
 export function pointsByDay(state: AppState): Map<string, number> {
   const map = new Map<string, number>();
   for (const e of state.ledger) {
-    if (e.points <= 0) continue;
+    if (e.source !== "task" || e.points <= 0) continue;
     map.set(e.date, (map.get(e.date) ?? 0) + e.points);
   }
   return map;
@@ -63,7 +65,7 @@ export function weekDays(today: Date): string[] {
 
 export function pointsThisWeek(state: AppState, today: Date): number {
   const days = new Set(weekDays(today));
-  return state.ledger.filter((e) => e.points > 0 && days.has(e.date)).reduce((s, e) => s + e.points, 0);
+  return state.ledger.filter((e) => e.source === "task" && days.has(e.date)).reduce((s, e) => s + e.points, 0);
 }
 
 const STATUS_ORDER: Record<Task["status"], number> = { open: 0, submitted: 1, verified: 2 };
@@ -172,16 +174,21 @@ export interface BoardRow extends LeaderboardEntry {
   me: boolean;
 }
 
+/** Teachers are not ranked, so they only see the students. */
+function withMe(state: AppState, rows: LeaderboardEntry[], me: LeaderboardEntry): LeaderboardEntry[] {
+  return state.role === "student" ? [...rows, me] : rows;
+}
+
 export function classBoard(state: AppState): BoardRow[] {
   const me: LeaderboardEntry = { id: "me", name: state.student.shortName, points: earnedPoints(state) };
-  return [...state.classmates, me]
+  return withMe(state, state.classmates, me)
     .sort((a, b) => b.points - a.points)
     .map((e, i) => ({ ...e, rank: i + 1, me: e.id === "me" }));
 }
 
 export function schoolBoard(state: AppState): BoardRow[] {
-  const me: LeaderboardEntry = { id: "me", name: state.student.shortName, group: "9B", points: earnedPoints(state) };
-  return [...state.school, me]
+  const me: LeaderboardEntry = { id: "me", name: state.student.shortName, group: state.student.yearGroup || "9B", points: earnedPoints(state) };
+  return withMe(state, state.school, me)
     .sort((a, b) => b.points - a.points)
     .map((e, i) => ({ ...e, rank: i + 1, me: e.id === "me" }));
 }

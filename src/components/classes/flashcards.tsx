@@ -136,7 +136,7 @@ function ReviewSession({ deck, onClose }: { deck: Deck; onClose: () => void }) {
   }
 
   const next = (knew: boolean) => {
-    actions.reviewCard(deck.id);
+    actions.reviewCard(deck.id, card.id, knew);
     if (!knew) setAgain((n) => n + 1);
     if (index + 1 >= deck.cards.length) toast(`${deck.title} reviewed`, "success");
     setIndex((i) => i + 1);

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast, useNow } from "@/lib/client-hooks";
 import { balance, classById, streak } from "@/lib/selectors";
-import { actions, useAppState } from "@/lib/store";
+import { actions, auth, useAppState } from "@/lib/store";
 import type { AppState } from "@/lib/types";
 import { CloseIcon, LogoMark, MenuIcon, SearchIcon } from "../icons";
 import { Avatar, Chip, ClassChip, cx } from "../ui";
@@ -187,27 +187,38 @@ function AccountMenu({ state }: { state: AppState | null }) {
           <div className="px-3 py-2.5">
             <p className="text-[13px] font-semibold">{state.student.fullName}</p>
             <p className="truncate text-[11.5px] text-muted">{state.student.email}</p>
+            <p className="mt-1.5">
+              <Chip tone={state.mode === "live" ? "mint" : "neutral"} size="sm">
+                {state.mode === "live" ? `Signed in · ${state.student.yearGroup || "Student"}` : "Demo mode"}
+              </Chip>
+            </p>
           </div>
           <div className="my-1 h-px bg-line" />
+          {state.mode === "demo" && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                actions.resetDemo();
+                setOpen(false);
+                toast("Demo data reset");
+              }}
+              className="w-full rounded-[10px] px-3 py-2 text-left text-[13px] text-ink hover:bg-canvas"
+            >
+              Reset demo data
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              actions.resetDemo();
+            onClick={async () => {
               setOpen(false);
-              toast("Demo data reset");
+              await auth.signOut();
+              router.push("/sign-in");
             }}
             className="w-full rounded-[10px] px-3 py-2 text-left text-[13px] text-ink hover:bg-canvas"
           >
-            Reset demo data
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => router.push("/sign-in")}
-            className="w-full rounded-[10px] px-3 py-2 text-left text-[13px] text-ink hover:bg-canvas"
-          >
-            Sign out
+            {state.mode === "demo" ? "Leave the demo" : "Sign out"}
           </button>
         </div>
       )}

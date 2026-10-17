@@ -41,6 +41,8 @@ export function ClassDetailView({ classId }: { classId: string }) {
     .reverse();
   const unread = unreadPosts(state, cls.id);
   const decks = state.decks.filter((d) => d.classId === cls.id);
+  const teaching = state.teachingClassIds.includes(cls.id);
+  const toReview = state.pendingReviews.filter((r) => r.classId === cls.id);
 
   const askClarion = () => {
     actions.setAiContext(cls.id);
@@ -75,11 +77,42 @@ export function ClassDetailView({ classId }: { classId: string }) {
 
       <div className="flex flex-1 flex-col gap-5 lg:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
+          {teaching && (
+            <Card>
+              <CardHeader title="Handed in">
+                <Chip tone={toReview.length ? "pending" : "neutral"}>{toReview.length} to verify</Chip>
+              </CardHeader>
+              <div className="mt-3 h-px bg-line" />
+              {toReview.length === 0 ? (
+                <p className="pt-3 text-[12.5px] text-muted">Nothing waiting. Handed-in work shows up here for you to verify.</p>
+              ) : (
+                <ul>
+                  {toReview.map((r) => (
+                    <li key={r.submissionId} className="flex flex-wrap items-center gap-3 border-t border-line py-3 first:border-t-0">
+                      <Avatar name={r.studentName} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-semibold">{r.title}</p>
+                        <p className="text-[11.5px] text-faint">
+                          {r.studentName} · handed in {timeAgo(r.submittedAt, now)} · {r.points} pts
+                        </p>
+                      </div>
+                      <Button variant="secondary" size="sm" onClick={() => actions.reviewSubmission(r.submissionId, "returned")}>
+                        Return
+                      </Button>
+                      <Button size="sm" onClick={() => actions.reviewSubmission(r.submissionId, "verified")}>
+                        Verify
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
           <Card>
             <CardHeader title="Deadlines">
               {openCount > 0 && <Chip tone="amber">{openCount} open</Chip>}
               <span className="flex-1" />
-              <TextButton onClick={() => setAdding(true)}>Add a reminder</TextButton>
+              {teaching && <TextButton onClick={() => setAdding(true)}>Set work</TextButton>}
             </CardHeader>
             <div className="mt-3 h-px bg-line" />
             {tasks.length === 0 ? (
@@ -89,7 +122,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
             ) : (
               <ul>
                 {tasks.map((t) => (
-                  <TaskRow key={t.id} task={t} cls={cls} today={today} showClass={false} showSetOn />
+                  <TaskRow key={t.id} task={t} cls={cls} today={today} showClass={false} showSetOn teaching={teaching} />
                 ))}
               </ul>
             )}
@@ -148,7 +181,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
         </div>
       </div>
 
-      <AddTaskModal open={adding} onClose={() => setAdding(false)} classes={state.classes} defaultClassId={cls.id} />
+      <AddTaskModal open={adding} onClose={() => setAdding(false)} teachingClasses={teaching ? [cls] : []} defaultClassId={cls.id} />
     </div>
   );
 }

@@ -95,7 +95,13 @@ export function DashboardView() {
           ) : (
             <ul>
               {visible.map((t) => (
-                <TaskRow key={t.id} task={t} cls={classById(state, t.classId)} today={today} />
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  cls={classById(state, t.classId)}
+                  today={today}
+                  teaching={!!t.classId && state.teachingClassIds.includes(t.classId)}
+                />
               ))}
             </ul>
           )}
@@ -205,7 +211,11 @@ export function DashboardView() {
         </div>
       </div>
 
-      <AddTaskModal open={adding} onClose={() => setAdding(false)} classes={state.classes} />
+      <AddTaskModal
+        open={adding}
+        onClose={() => setAdding(false)}
+        teachingClasses={state.classes.filter((c) => state.teachingClassIds.includes(c.id))}
+      />
     </div>
   );
 }

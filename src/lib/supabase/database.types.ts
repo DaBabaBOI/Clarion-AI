@@ -714,6 +714,15 @@ export type Database = {
           rank: number
         }[]
       }
+      classmates_leaderboard: {
+        Args: never
+        Returns: {
+          display_name: string
+          is_me: boolean
+          points: number
+          rank: number
+        }[]
+      }
       join_class: { Args: { code: string }; Returns: string }
       redeem_reward: { Args: { target_reward: string }; Returns: string }
       school_leaderboard: {

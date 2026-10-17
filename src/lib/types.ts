@@ -76,9 +76,11 @@ export interface Deck {
 export interface LedgerEntry {
   id: string;
   date: string; // yyyy-mm-dd
-  points: number; // positive = earned, negative = spent
+  points: number; // positive = earned or refunded, negative = spent or reversed
   label: string;
   classId?: string;
+  // "task": verified work (counts towards rank). "reward": spending and refunds.
+  source: "task" | "reward";
 }
 
 export interface Reward {
@@ -138,10 +140,28 @@ export interface ChatMessage {
   plan?: PlanRow[];
   quiz?: { deck: string; front: string; back: string };
   sources?: Source[];
+  pending?: boolean;
+  error?: boolean;
 }
+
+/** Handed-in work waiting for the signed-in teacher. */
+export interface PendingReview {
+  submissionId: string;
+  taskId: string;
+  classId: string;
+  title: string;
+  studentName: string;
+  submittedAt: string;
+  points: number;
+}
+
+export type DataMode = "demo" | "live";
+export type Role = "student" | "teacher" | "admin";
 
 export interface AppState {
   version: number;
+  mode: DataMode;
+  role: Role;
   createdOn: string;
   student: Student;
   classes: SchoolClass[];
@@ -161,4 +181,8 @@ export interface AppState {
   aiContextClassId: string | null;
   discussionClassId: string | null;
   selectedThreadId: string | null;
+  // Classes the signed-in user teaches (live mode), and their marking queue.
+  teachingClassIds: string[];
+  pendingReviews: PendingReview[];
+  conversationId: string | null;
 }

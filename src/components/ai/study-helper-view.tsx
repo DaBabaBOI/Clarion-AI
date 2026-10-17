@@ -63,8 +63,22 @@ function Message({ state, message }: { state: AppState; message: ChatMessage }) 
       </div>
     );
   }
+  if (message.pending) {
+    return (
+      <div className="flex w-fit items-center gap-1.5 rounded-[14px] bg-brand-soft px-4 py-3.5" aria-label="Clarion is thinking">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="size-1.5 animate-bounce rounded-full bg-brand" style={{ animationDelay: `${i * 140}ms` }} />
+        ))}
+      </div>
+    );
+  }
   return (
-    <div className="max-w-full rounded-[14px] bg-brand-soft px-3.5 py-3 text-[13.5px] leading-5 text-ink">
+    <div
+      className={cx(
+        "max-w-full rounded-[14px] px-3.5 py-3 text-[13.5px] leading-5 whitespace-pre-line",
+        message.error ? "bg-amber-soft text-ink" : "bg-brand-soft text-ink",
+      )}
+    >
       <p>{message.text}</p>
       {message.plan && <PlanTable state={state} rows={message.plan} />}
       {message.quiz && <QuizBubble key={message.id} quiz={message.quiz} />}
@@ -95,11 +109,14 @@ export function StudyHelperView() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [state.chat.length]);
 
-  const lastAnswer = [...state.chat].reverse().find((m) => m.role === "ai");
+  const lastAnswer = [...state.chat].reverse().find((m) => m.role === "ai" && !m.pending);
+  const thinking = state.chat.some((m) => m.pending);
 
-  const send = (text: string) => {
-    if (!text.trim()) return;
-    actions.ask(text);
+  const send = (text: string, mode?: "chat" | "plan" | "quiz") => {
+    if (!text.trim() || thinking) return;
+    const lower = text.toLowerCase();
+    const inferred = mode ?? (/\bplan\b|schedule|tonight/.test(lower) ? "plan" : /quiz|test me/.test(lower) ? "quiz" : "chat");
+    void actions.ask(text, inferred);
     setDraft("");
   };
 
@@ -167,10 +184,10 @@ export function StudyHelperView() {
             />
             <button
               type="submit"
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || thinking}
               className="rounded-full bg-brand-gradient px-[22px] py-2.5 text-[13.5px] font-semibold text-white transition disabled:opacity-50"
             >
-              Send
+              {thinking ? "Thinking…" : "Send"}
             </button>
           </form>
         </div>
@@ -210,15 +227,17 @@ export function StudyHelperView() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => send("Make me a plan for tonight, I have about 2 hours.")}
-                className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft"
+                onClick={() => send("Make me a plan for tonight, I have about 2 hours.", "plan")}
+                disabled={thinking}
+                className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft disabled:opacity-50"
               >
                 Make a study plan
               </button>
               <button
                 type="button"
-                onClick={() => send("Quiz me")}
-                className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft"
+                onClick={() => send("Quiz me", "quiz")}
+                disabled={thinking}
+                className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft disabled:opacity-50"
               >
                 Quiz me
               </button>
@@ -226,6 +245,7 @@ export function StudyHelperView() {
                 <button
                   type="button"
                   onClick={() => actions.clearChat()}
+                  disabled={thinking}
                   className="ml-auto rounded-full px-3 py-2 text-[12.5px] font-semibold text-muted hover:text-ink"
                 >
                   Clear
@@ -246,7 +266,9 @@ export function StudyHelperView() {
                 ))}
               </ul>
             ) : (
-              <p className="text-[12.5px] text-muted">The last answer did not use any of your files.</p>
+              <p className="text-[12.5px] text-muted">
+                {state.mode === "live" ? "The last answer used general knowledge, not your files." : "The last answer did not use any of your files."}
+              </p>
             )}
             <p className="rounded-control bg-canvas px-3 py-2.5 text-[12px] text-muted">Teachers can review AI chats for safety.</p>
           </Card>

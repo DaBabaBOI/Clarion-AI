@@ -324,7 +324,7 @@ function BoardRowView({ row, hidden, school }: { row: BoardRow; hidden: boolean;
 function LeaderboardCard({ state }: { state: AppState }) {
   const [scope, setScope] = useState<"class" | "school">("class");
   const rows = scope === "class" ? classBoard(state) : schoolBoard(state);
-  const me = rows.find((r) => r.me)!;
+  const me = rows.find((r) => r.me);
   const top = rows.slice(0, 4);
   const hidden = !state.showOnLeaderboard;
 
@@ -346,7 +346,7 @@ function LeaderboardCard({ state }: { state: AppState }) {
         {top.map((r) => (
           <BoardRowView key={r.id} row={r} hidden={hidden} school={scope === "school"} />
         ))}
-        {me.rank > top.length && (
+        {me && me.rank > top.length && (
           <>
             <li aria-hidden="true" className="px-2 text-[12px] leading-3 text-faint">
               ⋯
@@ -358,7 +358,8 @@ function LeaderboardCard({ state }: { state: AppState }) {
       <p className="text-[11.5px] text-faint">
         {scope === "school" ? "Other schools' students are anonymised. " : ""}Ranks use points earned, so spending points never drops you.
       </p>
-      <div className="flex items-center gap-3 border-t border-line pt-3">
+      {rows.length === 0 && <p className="px-2 text-[12.5px] text-muted">No points yet. They appear once work is verified.</p>}
+      <div className={cx("flex items-center gap-3 border-t border-line pt-3", state.role !== "student" && "hidden")}>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold">Show my name</p>
           <p className="text-[11.5px] text-muted">{hidden ? "Classmates see “Hidden student”." : "Classmates can see your name and points."}</p>

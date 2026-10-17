@@ -5,7 +5,7 @@ import type { AppState, Deck, LedgerEntry, Task, Thread } from "./types";
 // relative to the day the demo is first opened so "Overdue", "Today" and the
 // streak always read correctly.
 
-export const DEMO_VERSION = 1;
+export const DEMO_VERSION = 2;
 
 function hoursAgo(now: Date, h: number): string {
   return new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
@@ -50,6 +50,7 @@ export function createDemoState(now: Date): AppState {
     points,
     label,
     classId,
+    source: "task",
   }));
 
   const threads: Thread[] = [
@@ -237,6 +238,8 @@ export function createDemoState(now: Date): AppState {
 
   return {
     version: DEMO_VERSION,
+    mode: "demo",
+    role: "student",
     createdOn: toISODate(today),
     student: {
       id: "me",
@@ -337,5 +340,8 @@ export function createDemoState(now: Date): AppState {
     aiContextClassId: null,
     discussionClassId: null,
     selectedThreadId: null,
+    teachingClassIds: [],
+    pendingReviews: [],
+    conversationId: null,
   };
 }

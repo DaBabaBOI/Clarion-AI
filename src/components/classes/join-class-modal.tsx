@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "@/lib/client-hooks";
+import { actions } from "@/lib/store";
 import type { SchoolClass } from "@/lib/types";
 import { CODE_LENGTH, CodeInput } from "../code-input";
 import { Button, Modal } from "../ui";
@@ -17,11 +18,12 @@ export function JoinClassModal({ open, onClose, classes }: { open: boolean; onCl
 function JoinForm({ classes, onDone }: { classes: SchoolClass[]; onDone: () => void }) {
   const [code, setCode] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
 
   return (
     <form
       className="flex flex-col gap-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (code.length < CODE_LENGTH) {
           setMessage("Class codes have six characters.");
@@ -32,8 +34,14 @@ function JoinForm({ classes, onDone }: { classes: SchoolClass[]; onDone: () => v
           setMessage(`You are already in ${existing.name}.`);
           return;
         }
-        // Joining needs the school's class list, which lives in Supabase.
-        toast("Class codes work once your school is connected");
+        setJoining(true);
+        const result = await actions.joinClass(code);
+        setJoining(false);
+        if (!result.ok) {
+          setMessage(result.message);
+          return;
+        }
+        toast(result.message, "success");
         onDone();
       }}
     >
@@ -47,7 +55,9 @@ function JoinForm({ classes, onDone }: { classes: SchoolClass[]; onDone: () => v
         <Button variant="secondary" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit">Join class</Button>
+        <Button type="submit" disabled={joining}>
+          {joining ? "Joining…" : "Join class"}
+        </Button>
       </div>
     </form>
   );

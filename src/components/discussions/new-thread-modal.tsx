@@ -47,15 +47,19 @@ function NewThreadForm({
   const [visibility, setVisibility] = useState<"public" | "direct">("public");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [posting, setPosting] = useState(false);
   const teacher = classes.find((c) => c.id === classId)?.teacher ?? "your teacher";
 
   return (
     <form
       className="flex flex-col gap-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        if (!title.trim() || !body.trim() || !classId) return;
-        const id = actions.createThread({ classId, title, body, visibility });
+        if (!title.trim() || !body.trim() || !classId || posting) return;
+        setPosting(true);
+        const id = await actions.createThread({ classId, title, body, visibility });
+        setPosting(false);
+        if (!id) return;
         toast(visibility === "direct" ? `Sent to ${teacher}` : "Thread posted", "success");
         onCreated(id);
         onClose();
@@ -125,7 +129,9 @@ function NewThreadForm({
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit">Post</Button>
+        <Button type="submit" disabled={posting}>
+          {posting ? "Posting…" : "Post"}
+        </Button>
       </div>
     </form>
   );

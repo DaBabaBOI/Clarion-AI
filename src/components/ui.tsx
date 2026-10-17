@@ -193,12 +193,15 @@ export function TaskCheckbox({
   status,
   label,
   onToggle,
+  personal = false,
 }: {
   status: TaskStatus;
   label: string;
   onToggle: () => void;
+  personal?: boolean;
 }) {
-  const verified = status === "verified";
+  // Verified class work is locked; a personal reminder can always be un-ticked.
+  const verified = status === "verified" && !personal;
   return (
     <button
       type="button"
@@ -206,14 +209,23 @@ export function TaskCheckbox({
       aria-checked={status !== "open"}
       aria-disabled={verified}
       aria-label={
-        verified ? `${label}: verified by your teacher` : status === "submitted" ? `${label}: handed in, tap to undo` : `Hand in ${label}`
+        personal
+          ? status === "open"
+            ? `Mark ${label} as done`
+            : `${label}: done, tap to undo`
+          : verified
+            ? `${label}: verified by your teacher`
+            : status === "submitted"
+              ? `${label}: handed in, tap to undo`
+              : `Hand in ${label}`
       }
       onClick={verified ? undefined : onToggle}
       className={cx(
         "grid size-5 shrink-0 place-items-center rounded-[6px] text-white transition",
         status === "open" && "border-[1.5px] border-line bg-white hover:border-brand",
         status === "submitted" && "bg-brand-gradient",
-        verified && "cursor-default bg-mint",
+        status === "verified" && "bg-mint",
+        verified && "cursor-default",
       )}
     >
       {status !== "open" && <CheckIcon />}
