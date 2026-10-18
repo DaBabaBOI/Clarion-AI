@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TopBar />
       <div className="flex">
         <Sidebar />
-        <main id="content" className="flex min-h-[calc(100dvh-4rem)] min-w-0 flex-1 flex-col px-4 py-6 sm:px-[30px] sm:py-[26px]">
+        <main id="content" className="flex min-h-[calc(var(--screen)-4rem)] min-w-0 flex-1 flex-col px-4 py-6 sm:px-[30px] sm:py-[26px]">
           {state ? (
             children
           ) : status === "error" ? (

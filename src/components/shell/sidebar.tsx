@@ -60,7 +60,7 @@ export function SidebarProfile() {
 
 export function Sidebar() {
   return (
-    <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-[232px] shrink-0 flex-col justify-between border-r border-line bg-white px-3.5 py-[18px] lg:flex">
+    <aside className="sticky top-16 hidden h-[calc(var(--screen)-4rem)] w-[232px] shrink-0 flex-col justify-between border-r border-line bg-white px-3.5 py-[18px] lg:flex">
       <SidebarNav />
       <SidebarProfile />
     </aside>

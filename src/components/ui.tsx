@@ -152,11 +152,19 @@ const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   ghost: "text-brand hover:bg-brand-soft",
 };
 
-function buttonClass(variant: ButtonVariant, size: "sm" | "md", full?: boolean, pill?: boolean) {
+type ButtonSize = "xs" | "sm" | "md";
+
+const BUTTON_SIZES: Record<ButtonSize, string> = {
+  xs: "px-2.5 py-1.5 text-[12px]",
+  sm: "px-4 py-[9px] text-[13px]",
+  md: "px-4 py-2.5 text-[13.5px]",
+};
+
+function buttonClass(variant: ButtonVariant, size: ButtonSize, full?: boolean, pill?: boolean) {
   return cx(
     "inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap transition disabled:cursor-not-allowed disabled:opacity-50",
     pill ? "rounded-full" : "rounded-control",
-    size === "sm" ? "px-4 py-[9px] text-[13px]" : "px-4 py-2.5 text-[13.5px]",
+    BUTTON_SIZES[size],
     BUTTON_VARIANTS[variant],
     full && "w-full",
   );
@@ -170,7 +178,7 @@ export function Button({
   className,
   type = "button",
   ...rest
-}: ComponentProps<"button"> & { variant?: ButtonVariant; size?: "sm" | "md"; full?: boolean; pill?: boolean }) {
+}: ComponentProps<"button"> & { variant?: ButtonVariant; size?: ButtonSize; full?: boolean; pill?: boolean }) {
   return <button type={type} className={cx(buttonClass(variant, size, full, pill), className)} {...rest} />;
 }
 
@@ -180,7 +188,7 @@ export function ButtonLink({
   full,
   className,
   ...rest
-}: ComponentProps<typeof Link> & { variant?: ButtonVariant; size?: "sm" | "md"; full?: boolean }) {
+}: ComponentProps<typeof Link> & { variant?: ButtonVariant; size?: ButtonSize; full?: boolean }) {
   return <Link className={cx(buttonClass(variant, size, full), className)} {...rest} />;
 }
 

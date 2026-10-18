@@ -123,7 +123,7 @@ export function SignInView() {
   );
 
   return (
-    <div className="flex min-h-dvh flex-col lg:flex-row">
+    <div className="flex min-h-(--screen) flex-col lg:flex-row">
       <section className="flex flex-col justify-center bg-brand-soft px-6 py-10 sm:px-16 lg:w-[620px] lg:shrink-0 lg:py-16">
         <div className="flex items-center gap-3">
           <LogoMark size={40} />

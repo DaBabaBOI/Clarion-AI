@@ -18,7 +18,7 @@ export function AuthCallback() {
   }, [router]);
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-canvas text-[13px] text-muted">
+    <main className="grid min-h-(--screen) place-items-center bg-canvas text-[13px] text-muted">
       <p role="status">Signing you in…</p>
     </main>
   );

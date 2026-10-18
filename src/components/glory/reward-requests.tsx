@@ -17,19 +17,21 @@ export function RewardRequestsCard({ requests, now }: { requests: RewardRequest[
       ) : (
         <ul className="flex flex-col">
           {requests.map((r) => (
-            <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line py-3 first:border-t-0 first:pt-0">
+            <li key={r.id} className="flex items-center gap-2.5 border-t border-line py-2.5 first:border-t-0 first:pt-0 last:pb-0">
               <Avatar name={r.studentName} size={28} />
-              <div className="min-w-0 flex-1 basis-[150px]">
-                <p className="text-[13px] font-semibold text-ink">{r.rewardTitle}</p>
-                <p className="text-[11.5px] text-faint">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-ink" title={r.rewardTitle}>
+                  {r.rewardTitle}
+                </p>
+                <p className="truncate text-[11.5px] text-faint">
                   {r.studentName} · {r.cost} pts · {timeAgo(r.at, now)}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={() => actions.decideReward(r.id, false)}>
+              <div className="flex shrink-0 gap-1.5">
+                <Button variant="secondary" size="xs" onClick={() => actions.decideReward(r.id, false)}>
                   Decline
                 </Button>
-                <Button size="sm" onClick={() => actions.decideReward(r.id, true)}>
+                <Button size="xs" onClick={() => actions.decideReward(r.id, true)}>
                   Approve
                 </Button>
               </div>

@@ -77,7 +77,7 @@ export function StaffDashboard() {
             <CardHeader title="To check">
               <Chip tone={reviews.length ? "pending" : "neutral"}>{reviews.length}</Chip>
               <span className="flex-1" />
-              {reviews.length > 4 && (
+              {reviews.length > 3 && (
                 <TextButton onClick={() => setShowAllReviews((v) => !v)}>{showAllReviews ? "Show less" : `View all ${reviews.length}`}</TextButton>
               )}
             </CardHeader>
@@ -88,7 +88,7 @@ export function StaffDashboard() {
               </div>
             ) : (
               <ul>
-                {(showAllReviews ? reviews : reviews.slice(0, 4)).map((r) => (
+                {(showAllReviews ? reviews : reviews.slice(0, 3)).map((r) => (
                   <ReviewRow key={r.submission.id} review={r} now={now} />
                 ))}
               </ul>
@@ -98,7 +98,7 @@ export function StaffDashboard() {
           <Card>
             <CardHeader title="Work you set">
               <span className="flex-1" />
-              {work.length > 5 && (
+              {work.length > 4 && (
                 <TextButton onClick={() => setShowAllWork((v) => !v)}>{showAllWork ? "Show less" : `View all ${work.length}`}</TextButton>
               )}
             </CardHeader>
@@ -112,7 +112,7 @@ export function StaffDashboard() {
               </div>
             ) : (
               <ul>
-                {(showAllWork ? work : work.slice(0, 5)).map((t) => (
+                {(showAllWork ? work : work.slice(0, 4)).map((t) => (
                   <TaskRow key={t.id} task={t} cls={classById(state, t.classId)} today={today} teaching />
                 ))}
               </ul>
@@ -120,7 +120,7 @@ export function StaffDashboard() {
           </Card>
         </div>
 
-        <div className="flex w-full flex-col gap-5 lg:w-[372px] lg:shrink-0">
+        <div className="flex w-full flex-col gap-4 lg:w-[372px] lg:shrink-0">
           <WeekCard now={now} dueOn={dueOn} />
 
           <section className="rounded-card bg-brand-soft px-5 py-[18px]">

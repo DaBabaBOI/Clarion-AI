@@ -70,6 +70,27 @@
   color: transparent;
 }
 
+/*
+ * On laptops and desktops the whole app is drawn at 90%, like browser zoom,
+ * so the dashboard fits on one screen. Phones stay at 100% so text stays
+ * readable. Heights tied to the screen use --screen, which undoes the scale
+ * so the sidebar and pages still reach the bottom edge.
+ */
+:root {
+  --ui-scale: 1;
+  --screen: calc(100dvh / var(--ui-scale));
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --ui-scale: 0.9;
+  }
+
+  html {
+    zoom: var(--ui-scale);
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;

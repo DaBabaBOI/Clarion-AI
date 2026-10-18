@@ -308,7 +308,7 @@ export function StudyHelperView() {
             </div>
             <div
               ref={scrollRef}
-              className="flex max-h-[min(440px,55dvh)] flex-col gap-3.5 overflow-y-auto pr-0.5"
+              className="flex max-h-[min(440px,calc(var(--screen)*0.55))] flex-col gap-3.5 overflow-y-auto pr-0.5"
               aria-live="polite"
               aria-label="Conversation"
             >
