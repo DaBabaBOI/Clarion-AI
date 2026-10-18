@@ -40,6 +40,23 @@ The `clarion-ai` project has a test school seeded by `supabase/seed/test_school.
 
 Passwords were shared privately, not committed. Sign in as the student to hand work in; sign in as the teacher and open a class to **verify** it (that is the only way points are paid) or **set work** with points. Class codes: Biology `7K2H9B`, Maths `M9X4QT`, English `E9R2WK`, History `H9P7LN`.
 
+### Clarion International School
+
+A full school to use Clarion with, made by `supabase/seed/clarion_international.sql`. Every account shares one password (shared privately, not committed). All addresses are Gmail "+" aliases, so password resets arrive in the owner's inbox.
+
+| Account | Role | Classes |
+| --- | --- | --- |
+| `prithu1606+coordinator@gmail.com` | Coordinator: Nandini Rao | School overview, teaches English 9 |
+| `prithu1606+kaushal@gmail.com` | Teacher: Anjali Kaushal | Biology 9, Biology 10 |
+| `prithu1606+iyer@gmail.com` | Teacher: Vikram Iyer | Maths 9 |
+| `prithu1606+khan@gmail.com` | Teacher: Farah Khan | Maths 10 |
+| `prithu1606+mathew@gmail.com` | Teacher: Daniel Mathew | English 10 |
+| `prithu1606+banerjee@gmail.com` | Teacher: Sourav Banerjee | History 9, History 10 |
+| `prithu1606+<first name>@gmail.com` | 12 Year 9 students (Ananya, Rohan, Zara, Aarav, Meera, Kabir, Ishaan, Diya, Vihaan, Saanvi, Arjun, Tara) | All four Year 9 classes |
+| `prithu1606+<first name>@gmail.com` | 12 Year 10 students (Aditya, Riya, Sameer, Anika, Neel, Pooja, Yash, Ira, Karan, Leela, Om, Myra) | All four Year 10 classes |
+
+It comes with 34 pieces of work (instructions and resource links), about 200 hand-ins (most older work verified, recent work waiting to be checked, a few returned), points, class discussions with unanswered student questions, flashcard decks and two reward requests. Class codes: `BIO9KX`, `MAT9QT`, `ENG9LP`, `HIS9VD`, `BIO10Z`, `MAT10W`, `ENG10R`, `HIS10S`.
+
 Google sign-in appears on the sign-in screen automatically once the Google provider is switched on in Supabase (Authentication → Providers → Google, redirect `https://miulgjlrdxzveufoxkmj.supabase.co/auth/v1/callback`), as long as the site's address is in the Redirect URLs (see above; add `http://localhost:3000/**` too for local development).
 
 ## Screens
