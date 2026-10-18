@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Until auth is wired to Supabase, the entry point goes straight to sign in.
+// The app starts at sign in, which sends anyone already signed in on to the dashboard.
 export default function Home() {
   redirect("/sign-in");
 }

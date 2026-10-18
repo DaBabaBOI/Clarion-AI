@@ -6,6 +6,7 @@ import { toast } from "./client-hooks";
 import { createDemoState, DEMO_VERSION } from "./demo-data";
 import { toISODate } from "./dates";
 import { greeting, loadLiveState, NotSignedInError } from "./live/load";
+import { BASE_PATH } from "./routes";
 import { balance } from "./selectors";
 import { reply } from "./study-helper";
 import { getSupabase, isSupabaseConfigured } from "./supabase/client";
@@ -225,7 +226,7 @@ export const auth = {
   async signInWithGoogle(): Promise<string | null> {
     const { error } = await getSupabase().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}${BASE_PATH}/auth/callback/` },
     });
     return error?.message ?? null;
   },

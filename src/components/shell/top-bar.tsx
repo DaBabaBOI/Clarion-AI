@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast, useNow } from "@/lib/client-hooks";
+import { classHref } from "@/lib/routes";
 import { balance, classById, streak } from "@/lib/selectors";
 import { actions, auth, useAppState } from "@/lib/store";
 import type { AppState } from "@/lib/types";
@@ -27,7 +28,7 @@ function search(state: AppState, query: string): SearchResult[] {
   const results: SearchResult[] = [];
   for (const c of state.classes) {
     if (c.name.toLowerCase().includes(q) || c.teacher.toLowerCase().includes(q)) {
-      results.push({ key: c.id, kind: "Class", title: c.name, detail: c.teacher, classId: c.id, href: `/classes/${c.id}` });
+      results.push({ key: c.id, kind: "Class", title: c.name, detail: c.teacher, classId: c.id, href: classHref(c.id) });
     }
   }
   for (const t of state.tasks) {
@@ -38,7 +39,7 @@ function search(state: AppState, query: string): SearchResult[] {
         title: t.title,
         detail: classById(state, t.classId)?.name ?? "Personal",
         classId: t.classId,
-        href: t.classId ? `/classes/${t.classId}` : "/dashboard",
+        href: t.classId ? classHref(t.classId) : "/dashboard",
       });
     }
   }

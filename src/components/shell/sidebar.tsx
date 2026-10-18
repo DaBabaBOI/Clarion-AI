@@ -2,38 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
 import { useAppState } from "@/lib/store";
 import { unreadPosts } from "@/lib/selectors";
 import { Avatar, cx } from "../ui";
 import { NAV_ITEMS } from "./nav";
 
-type NavProps = { onNavigate?: () => void };
-
-/**
- * The current path is request data on dynamic routes such as /classes/[id],
- * so the active state streams in; until then the links render without it.
- */
-export function SidebarNav(props: NavProps) {
-  return (
-    <Suspense fallback={<NavList pathname={null} {...props} />}>
-      <ActiveNav {...props} />
-    </Suspense>
-  );
-}
-
-function ActiveNav(props: NavProps) {
-  return <NavList pathname={usePathname()} {...props} />;
-}
-
-function NavList({ pathname, onNavigate }: NavProps & { pathname: string | null }) {
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
   const state = useAppState();
   const unread = state ? unreadPosts(state) : 0;
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-1">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-        const active = pathname !== null && (pathname === href || pathname.startsWith(`${href}/`));
+        const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
             key={href}

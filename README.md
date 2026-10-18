@@ -12,7 +12,17 @@ cp .env.example .env.local   # Supabase URL + publishable key (safe for the brow
 npm run dev                  # http://localhost:3000
 ```
 
-`npm run build && npm start` for a production build. `npm run lint` before pushing.
+`npm run build` writes the finished site to `out/` as plain static files (there is no server: every screen talks to Supabase from the browser). `npm run lint` before pushing.
+
+## Put it online (GitHub Pages)
+
+`.github/workflows/deploy-pages.yml` builds the site and publishes it on every push to the default branch.
+
+1. Repo **Settings → Pages → Build and deployment → Source: GitHub Actions** (once).
+2. **Actions → Deploy to GitHub Pages → Run workflow** (or push). The link is shown on the run and in Settings → Pages: `https://dabababoi.github.io/Clarion-AI/`.
+3. Supabase **Authentication → URL Configuration**: set **Site URL** to that link and add `https://dabababoi.github.io/Clarion-AI/**` under **Redirect URLs** (Google sign-in returns to `/auth/callback/`).
+
+Email and password sign-in works as soon as step 2 finishes. The same `out/` folder can go on any static host.
 
 There are two ways in:
 
@@ -30,16 +40,16 @@ The `clarion-ai` project has a test school seeded by `supabase/seed/test_school.
 
 Passwords were shared privately, not committed. Sign in as the student to hand work in; sign in as the teacher and open a class to **verify** it (that is the only way points are paid) or **set work** with points. Class codes: Biology `7K2H9B`, Maths `M9X4QT`, English `E9R2WK`, History `H9P7LN`.
 
-Google sign-in appears on the sign-in screen automatically once the Google provider is switched on in Supabase (Authentication → Providers → Google, redirect `https://miulgjlrdxzveufoxkmj.supabase.co/auth/v1/callback`, and add `http://localhost:3000/auth/callback` under URL Configuration).
+Google sign-in appears on the sign-in screen automatically once the Google provider is switched on in Supabase (Authentication → Providers → Google, redirect `https://miulgjlrdxzveufoxkmj.supabase.co/auth/v1/callback`), as long as the site's address is in the Redirect URLs (see above; add `http://localhost:3000/**` too for local development).
 
 ## Screens
 
 | Route | What it does |
 | --- | --- |
-| `/sign-in` | Sign in or join a class with a six character code (demo: any email works) |
+| `/sign-in` | Sign in, join a class with a six character code, or explore the demo |
 | `/dashboard` | Stats, task list with hand-in checkboxes, week strip, "Clarion suggests", latest teacher post, add task |
 | `/classes` | One card per class: tasks due, new posts, flashcards, next deadline |
-| `/classes/[id]` | Deadlines, class discussions, flashcard flip and review, "Ask Clarion about this class" |
+| `/classes/view?id=` | Deadlines, class discussions, flashcard flip and review, "Ask Clarion about this class" |
 | `/ai` | Priority list (urgent → done), chat with study-plan and quiz quick actions, sources card |
 | `/discussions` | Searchable, filterable inbox across classes; public and direct threads; reply composer |
 | `/road-to-glory` | Gamification, redesigned (see below) |
@@ -98,6 +108,7 @@ src/
     selectors.ts       derived numbers shared by every screen
     study-helper.ts    offline stand-in for the AI
     supabase/          Supabase clients and generated types
+.github/workflows/     GitHub Pages deploy
 supabase/
   migrations/          database schema and policies
   functions/           study-helper Edge Function (Gemini)

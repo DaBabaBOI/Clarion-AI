@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast, useNow } from "@/lib/client-hooks";
 import { timeAgo, toISODate } from "@/lib/dates";
@@ -12,6 +12,12 @@ import { AddTaskModal } from "../tasks/add-task-modal";
 import { TaskRow } from "../tasks/task-row";
 import { Avatar, Button, CLASS_SWATCH, Card, CardHeader, Chip, EmptyState, TextButton, cx } from "../ui";
 import { FlashcardsCard } from "./flashcards";
+
+/** The class page for `?id=`. Keyed so moving between classes starts each one fresh. */
+export function ClassDetailFromUrl() {
+  const classId = useSearchParams().get("id") ?? "";
+  return <ClassDetailView key={classId} classId={classId} />;
+}
 
 export function ClassDetailView({ classId }: { classId: string }) {
   const state = useAppState()!;

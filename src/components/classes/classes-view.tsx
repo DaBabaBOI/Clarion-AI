@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useNow } from "@/lib/client-hooks";
 import { diffDays, dueLabel, numberWord, toISODate } from "@/lib/dates";
+import { classHref } from "@/lib/routes";
 import { cardsInClass, nextDeadline, taskStats, unreadPosts } from "@/lib/selectors";
 import { useAppState } from "@/lib/store";
 import type { AppState, SchoolClass } from "@/lib/types";
@@ -23,7 +24,7 @@ function ClassCard({ state, cls, today }: { state: AppState; cls: SchoolClass; t
   const open = state.tasks.filter((t) => t.classId === cls.id && t.status === "open");
   const overdue = open.some((t) => diffDays(t.due, today) < 0);
   const next = nextDeadline(state, cls.id);
-  const href = `/classes/${cls.id}`;
+  const href = classHref(cls.id);
 
   return (
     <article className="flex flex-col gap-3.5 rounded-card border border-line bg-white px-5 py-[18px]">
