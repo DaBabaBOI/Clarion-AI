@@ -295,7 +295,7 @@ export function StudyHelperView() {
                   type="button"
                   onClick={() => actions.setAiContext(null)}
                   aria-label={`Stop focusing on ${contextClass.name}`}
-                  className="flex items-center gap-1 rounded-full bg-canvas px-[9px] py-1 text-[11px] font-semibold text-muted hover:text-ink"
+                  className="flex items-center gap-1 rounded-full bg-neutral-tag px-[9px] py-1 text-[11px] font-semibold text-neutral-tag-ink hover:text-ink"
                 >
                   {contextClass.name}
                   <CloseIcon width={10} height={10} />

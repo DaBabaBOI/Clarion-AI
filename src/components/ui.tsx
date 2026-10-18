@@ -70,16 +70,16 @@ export type ChipTone =
   | "pending";
 
 const CHIP_TONES: Record<ChipTone, string> = {
-  amber: "bg-amber-soft text-amber",
-  sky: "bg-sky-soft text-sky",
-  mint: "bg-mint-soft text-mint",
-  brand: "bg-brand-soft text-brand",
-  neutral: "bg-canvas text-muted",
-  white: "bg-white text-muted",
-  teacher: "bg-brand text-white",
-  "solid-mint": "bg-mint text-white",
-  "solid-amber": "bg-amber text-white",
-  pending: "border border-dashed border-faint bg-white text-muted",
+  amber: "bg-amber-tag text-amber-tag-ink",
+  sky: "bg-sky-tag text-sky-tag-ink",
+  mint: "bg-mint-tag text-mint-tag-ink",
+  brand: "bg-brand-tag text-brand-tag-ink",
+  neutral: "bg-neutral-tag text-neutral-tag-ink",
+  white: "bg-white text-neutral-tag-ink",
+  teacher: "bg-brand-solid text-white",
+  "solid-mint": "bg-mint-solid text-white",
+  "solid-amber": "bg-amber-solid text-white",
+  pending: "border border-dashed border-neutral-tag-ink/50 bg-white text-neutral-tag-ink",
 };
 
 export function Chip({
@@ -117,10 +117,10 @@ export const CLASS_SWATCH: Record<ClassColor, string> = {
 };
 
 export const CLASS_TEXT: Record<ClassColor, string> = {
-  mint: "text-mint",
-  sky: "text-sky",
-  brand: "text-brand",
-  amber: "text-amber",
+  mint: "text-mint-tag-ink",
+  sky: "text-sky-tag-ink",
+  brand: "text-brand-tag-ink",
+  amber: "text-amber-tag-ink",
 };
 
 export function ClassChip({ cls, onWhite = false }: { cls: SchoolClass | null; onWhite?: boolean }) {

@@ -190,7 +190,7 @@ export function DiscussionsView() {
               <button
                 type="button"
                 onClick={() => actions.setDiscussionClass(null)}
-                className="flex items-center gap-1 rounded-full bg-brand-soft px-[9px] py-1 text-[11.5px] font-semibold text-brand"
+                className="flex items-center gap-1 rounded-full bg-brand-tag px-[9px] py-1 text-[11.5px] font-semibold text-brand-tag-ink"
                 aria-label={`Showing ${classFilter.name} only. Show all classes.`}
               >
                 {classFilter.name}

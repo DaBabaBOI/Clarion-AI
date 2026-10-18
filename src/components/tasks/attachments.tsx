@@ -102,7 +102,7 @@ export function AttachmentChips({ items }: { items: Attachment[] }) {
         <li key={a.id}>
           <OpenAttachment
             attachment={a}
-            className="inline-flex max-w-[220px] items-center gap-1.5 rounded-[8px] border border-line bg-canvas px-2 py-1 text-[11.5px] font-semibold text-muted transition hover:border-faint hover:text-ink"
+            className="inline-flex max-w-[220px] items-center gap-1.5 rounded-[8px] border border-line bg-neutral-tag px-2 py-1 text-[11.5px] font-semibold text-neutral-tag-ink transition hover:border-faint hover:text-ink"
           >
             {a.kind === "link" ? <LinkIcon width={12} height={12} /> : <PaperclipIcon width={12} height={12} />}
             <span className="truncate">{a.title}</span>

@@ -24,6 +24,24 @@
   --color-amber: #ef8b09;
   --color-amber-soft: #fff3e3;
 
+  /*
+   * Tags (chips) use deeper tints and darker text than the soft surfaces
+   * above, so they read clearly: every pair is at least 4.5:1.
+   */
+  --color-brand-tag: #e2defd;
+  --color-brand-tag-ink: #4a3ad4;
+  --color-sky-tag: #d8e6fc;
+  --color-sky-tag-ink: #1d5bc7;
+  --color-mint-tag: #d0eedd;
+  --color-mint-tag-ink: #05703f;
+  --color-amber-tag: #fde0bd;
+  --color-amber-tag-ink: #9a4d00;
+  --color-neutral-tag: #eceef4;
+  --color-neutral-tag-ink: #565b73;
+  --color-brand-solid: #5040e0;
+  --color-mint-solid: #08804a;
+  --color-amber-solid: #b85d00;
+
   --color-gold: #f2b325;
   --color-gold-soft: #fff6dc;
   --color-silver: #96a3b8;
