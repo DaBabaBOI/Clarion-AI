@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNow } from "@/lib/client-hooks";
-import { diffDays, toISODate } from "@/lib/dates";
-import { classById, priorityOf, sortTasks, type Priority } from "@/lib/selectors";
+import { diffDays, dueLabel, timeAgo, toISODate } from "@/lib/dates";
+import { taskHref } from "@/lib/routes";
+import { classById, isStaff, pendingReviews, priorityOf, sortTasks, taskProgress, teaches, type Priority } from "@/lib/selectors";
 import { actions, useAppState } from "@/lib/store";
 import type { AppState, ChatMessage, Source } from "@/lib/types";
 import { CloseIcon, LogoMark } from "../icons";
@@ -17,6 +19,17 @@ const PRIORITY: Record<Priority, { bar: string; chip: ChipTone; label: string; r
   waiting: { bar: "bg-faint", chip: "pending", label: "Awaiting check", rank: 4 },
   done: { bar: "bg-faint", chip: "mint", label: "Done", rank: 5 },
 };
+
+const STUDENT_ACTIONS: { label: string; prompt: string; mode: "chat" | "plan" | "quiz" }[] = [
+  { label: "Make a study plan", prompt: "Make me a plan for tonight, I have about 2 hours.", mode: "plan" },
+  { label: "Quiz me", prompt: "Quiz me", mode: "quiz" },
+];
+
+const STAFF_ACTIONS: typeof STUDENT_ACTIONS = [
+  { label: "Who is behind?", prompt: "Who is behind on their work?", mode: "chat" },
+  { label: "What should I check first?", prompt: "What should I check first?", mode: "chat" },
+  { label: "Draft instructions", prompt: "Help me draft instructions for the next piece of work.", mode: "chat" },
+];
 
 const SOURCE_DOT: Record<Source["kind"], string> = {
   task: "bg-mint",
@@ -59,7 +72,7 @@ function Message({ state, message }: { state: AppState; message: ChatMessage }) 
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[85%] rounded-[14px] bg-brand-gradient px-3.5 py-3 text-[13.5px] leading-5 text-white">{message.text}</p>
+        <p className="max-w-[85%] rounded-[14px] bg-brand px-3.5 py-3 text-[13.5px] leading-5 text-white">{message.text}</p>
       </div>
     );
   }
@@ -86,6 +99,67 @@ function Message({ state, message }: { state: AppState; message: ChatMessage }) 
   );
 }
 
+/** Staff: work to check (oldest first), then upcoming work and how many have handed it in. */
+function StaffPriorityList({ state, now }: { state: AppState; now: Date }) {
+  const today = toISODate(now);
+  const classId = state.aiContextClassId;
+  const reviews = pendingReviews(state).filter((r) => !classId || r.task.classId === classId);
+  const upcoming = sortTasks(state.tasks.filter((t) => teaches(state, t.classId) && (!classId || t.classId === classId) && t.due >= today)).slice(0, 6);
+  const rows = [
+    ...reviews.map((r) => {
+      const days = diffDays(today, r.submission.submittedAt.slice(0, 10));
+      return {
+        key: r.submission.id,
+        href: taskHref(r.task.id),
+        title: r.task.title,
+        detail: `${r.submission.studentName} · handed in ${timeAgo(r.submission.submittedAt, now)}`,
+        classId: r.task.classId,
+        bar: days >= 2 ? "bg-amber" : "bg-sky",
+        chip: { tone: (days >= 2 ? "amber" : "sky") as ChipTone, label: "To check" },
+      };
+    }),
+    ...upcoming.map((t) => {
+      const p = taskProgress(state, t);
+      const due = dueLabel(t.due, today);
+      return {
+        key: t.id,
+        href: taskHref(t.id),
+        title: t.title,
+        detail: `${p.handedIn} of ${p.total} handed in`,
+        classId: t.classId,
+        bar: "bg-brand",
+        chip: { tone: due.tone as ChipTone, label: due.label },
+      };
+    }),
+  ];
+  return (
+    <>
+      <div className="mt-3 h-px bg-line" />
+      {rows.length === 0 ? (
+        <p className="pt-3 text-[12.5px] text-muted">Nothing to check and nothing due. Ask Clarion for lesson ideas.</p>
+      ) : (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.key} className="border-t border-line first:border-t-0">
+              <Link href={r.href} className="group flex w-full items-center gap-3.5 py-[13px]">
+                <span className={cx("h-[34px] w-1 shrink-0 rounded-[2px]", r.bar)} aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold text-ink group-hover:text-brand">{r.title}</span>
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    <ClassChip cls={classById(state, r.classId)} />
+                    <span className="text-[11.5px] text-faint">{r.detail}</span>
+                  </span>
+                </span>
+                <Chip tone={r.chip.tone}>{r.chip.label}</Chip>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
 export function StudyHelperView() {
   const state = useAppState()!;
   const now = useNow();
@@ -94,6 +168,7 @@ export function StudyHelperView() {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contextClass = classById(state, state.aiContextClassId);
+  const staff = isStaff(state);
 
   const items = useMemo(() => {
     const relevant = state.tasks.filter(
@@ -122,45 +197,56 @@ export function StudyHelperView() {
 
   return (
     <div className="flex flex-1 flex-col gap-5">
-      <PageHeader title="Study Helper" subtitle="Sorted by what needs you first, not by class." />
+      <PageHeader
+        title={staff ? "AI Helper" : "Study Helper"}
+        subtitle={staff ? "What needs you first across your classes, and a helper that knows them." : "Sorted by what needs you first, not by class."}
+      />
 
       <div className="flex flex-1 flex-col gap-5 lg:flex-row">
         <div className="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-4">
           <Card className="order-3 flex flex-col lg:order-none lg:flex-1">
             <CardHeader title={contextClass ? `What needs you first in ${contextClass.name}` : "What needs you first"}>
               <span className="flex-1" />
-              <Chip tone="neutral">
-                {items.length} item{items.length === 1 ? "" : "s"}
-              </Chip>
+              {!staff && (
+                <Chip tone="neutral">
+                  {items.length} item{items.length === 1 ? "" : "s"}
+                </Chip>
+              )}
             </CardHeader>
-            <div className="mt-3 h-px bg-line" />
-            <ul>
-              {items.map((t) => {
-                const p = PRIORITY[priorityOf(t, today)];
-                const done = t.status !== "open";
-                return (
-                  <li key={t.id} className="border-t border-line first:border-t-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDraft(`Help me get started on ${t.title}`);
-                        inputRef.current?.focus();
-                      }}
-                      className="flex w-full items-center gap-3.5 py-[13px] text-left"
-                    >
-                      <span className={cx("h-[34px] w-1 shrink-0 rounded-[2px]", p.bar)} aria-hidden="true" />
-                      <span className="min-w-0 flex-1">
-                        <span className={cx("block text-[14px] font-semibold", done ? "text-faint" : "text-ink")}>{t.title}</span>
-                        <span className="mt-1 block">
-                          <ClassChip cls={classById(state, t.classId)} />
-                        </span>
-                      </span>
-                      <Chip tone={p.chip}>{p.label}</Chip>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            {staff ? (
+              <StaffPriorityList state={state} now={now} />
+            ) : (
+              <>
+                <div className="mt-3 h-px bg-line" />
+                <ul>
+                  {items.map((t) => {
+                    const p = PRIORITY[priorityOf(t, today)];
+                    const done = t.status !== "open";
+                    return (
+                      <li key={t.id} className="border-t border-line first:border-t-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDraft(`Help me get started on ${t.title}`);
+                            inputRef.current?.focus();
+                          }}
+                          className="flex w-full items-center gap-3.5 py-[13px] text-left"
+                        >
+                          <span className={cx("h-[34px] w-1 shrink-0 rounded-[2px]", p.bar)} aria-hidden="true" />
+                          <span className="min-w-0 flex-1">
+                            <span className={cx("block text-[14px] font-semibold", done ? "text-faint" : "text-ink")}>{t.title}</span>
+                            <span className="mt-1 block">
+                              <ClassChip cls={classById(state, t.classId)} />
+                            </span>
+                          </span>
+                          <Chip tone={p.chip}>{p.label}</Chip>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
           </Card>
 
           <form
@@ -178,14 +264,20 @@ export function StudyHelperView() {
               ref={inputRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={contextClass ? `Ask about ${contextClass.name}` : "Ask about your classes, tasks or notes"}
+              placeholder={
+                contextClass
+                  ? `Ask about ${contextClass.name}`
+                  : staff
+                    ? "Ask about your classes, students' work or a lesson idea"
+                    : "Ask about your classes, tasks or notes"
+              }
               autoComplete="off"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-ink placeholder:text-faint focus:outline-none"
             />
             <button
               type="submit"
               disabled={!draft.trim() || thinking}
-              className="rounded-full bg-brand-gradient px-[22px] py-2.5 text-[13.5px] font-semibold text-white transition disabled:opacity-50"
+              className="rounded-full bg-brand px-[22px] py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-brand-deep disabled:opacity-50"
             >
               {thinking ? "Thinking…" : "Send"}
             </button>
@@ -225,22 +317,17 @@ export function StudyHelperView() {
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => send("Make me a plan for tonight, I have about 2 hours.", "plan")}
-                disabled={thinking}
-                className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft disabled:opacity-50"
-              >
-                Make a study plan
-              </button>
-              <button
-                type="button"
-                onClick={() => send("Quiz me", "quiz")}
-                disabled={thinking}
-                className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft disabled:opacity-50"
-              >
-                Quiz me
-              </button>
+              {(staff ? STAFF_ACTIONS : STUDENT_ACTIONS).map((a) => (
+                <button
+                  key={a.label}
+                  type="button"
+                  onClick={() => send(a.prompt, a.mode)}
+                  disabled={thinking}
+                  className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft disabled:opacity-50"
+                >
+                  {a.label}
+                </button>
+              ))}
               {state.chat.length > 1 && (
                 <button
                   type="button"
@@ -270,7 +357,9 @@ export function StudyHelperView() {
                 {state.mode === "live" ? "The last answer used general knowledge, not your files." : "The last answer did not use any of your files."}
               </p>
             )}
-            <p className="rounded-control bg-canvas px-3 py-2.5 text-[12px] text-muted">Teachers can review AI chats for safety.</p>
+            <p className="rounded-control bg-canvas px-3 py-2.5 text-[12px] text-muted">
+              {staff ? "Clarion only sees the classes you teach. Student names never leave your school's Clarion." : "Teachers can review AI chats for safety."}
+            </p>
           </Card>
         </div>
       </div>

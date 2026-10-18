@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast, useNow } from "@/lib/client-hooks";
 import { timeAgo, toISODate } from "@/lib/dates";
-import { classById, sortThreads, sortTasks, unreadPosts } from "@/lib/selectors";
+import { classById, pendingReviews, roster, sortThreads, sortTasks, teaches, unreadPosts } from "@/lib/selectors";
 import { actions, useAppState } from "@/lib/store";
+import type { Member, SchoolClass } from "@/lib/types";
 import { LogoMark } from "../icons";
 import { AddTaskModal } from "../tasks/add-task-modal";
+import { ReviewRow } from "../tasks/review-list";
 import { TaskRow } from "../tasks/task-row";
 import { Avatar, Button, CLASS_SWATCH, Card, CardHeader, Chip, EmptyState, TextButton, cx } from "../ui";
 import { FlashcardsCard } from "./flashcards";
@@ -17,6 +19,38 @@ import { FlashcardsCard } from "./flashcards";
 export function ClassDetailFromUrl() {
   const classId = useSearchParams().get("id") ?? "";
   return <ClassDetailView key={classId} classId={classId} />;
+}
+
+/** Teachers: the class list with how many pieces of work each student has handed in. */
+function RosterCard({ cls, students }: { cls: SchoolClass; students: Member[] }) {
+  const state = useAppState()!;
+  const set = state.tasks.filter((t) => t.classId === cls.id);
+  return (
+    <Card className="flex flex-col gap-3">
+      <CardHeader title="Students" small>
+        <span className="flex-1" />
+        <Chip tone="neutral">Code {cls.code}</Chip>
+      </CardHeader>
+      {students.length === 0 ? (
+        <p className="text-[12.5px] text-muted">No students yet. Share the code {cls.code} so they can join.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {students.map((m) => {
+            const handedIn = state.submissions.filter((s) => s.studentId === m.userId && s.status !== "returned" && set.some((t) => t.id === s.taskId)).length;
+            return (
+              <li key={m.userId} className="flex items-center gap-2.5">
+                <Avatar name={m.name} size={26} />
+                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{m.name}</span>
+                <span className="text-[11.5px] text-faint">
+                  {handedIn}/{set.length} handed in
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
 }
 
 export function ClassDetailView({ classId }: { classId: string }) {
@@ -47,8 +81,9 @@ export function ClassDetailView({ classId }: { classId: string }) {
     .reverse();
   const unread = unreadPosts(state, cls.id);
   const decks = state.decks.filter((d) => d.classId === cls.id);
-  const teaching = state.teachingClassIds.includes(cls.id);
-  const toReview = state.pendingReviews.filter((r) => r.classId === cls.id);
+  const teaching = teaches(state, cls.id);
+  const toReview = pendingReviews(state, cls.id);
+  const students = roster(state, cls.id);
 
   const askClarion = () => {
     actions.setAiContext(cls.id);
@@ -75,7 +110,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
           <div className="mt-[5px] flex flex-wrap items-center gap-2">
             <span className="text-[12.5px] text-muted">{cls.teacher}</span>
             <Chip tone="neutral">Code {cls.code}</Chip>
-            <Chip tone="neutral">{cls.studentCount} students</Chip>
+            <Chip tone="neutral">{teaching ? students.length : cls.studentCount} students</Chip>
           </div>
         </div>
         <Button onClick={askClarion}>Ask Clarion about this class</Button>
@@ -94,21 +129,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
               ) : (
                 <ul>
                   {toReview.map((r) => (
-                    <li key={r.submissionId} className="flex flex-wrap items-center gap-3 border-t border-line py-3 first:border-t-0">
-                      <Avatar name={r.studentName} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-semibold">{r.title}</p>
-                        <p className="text-[11.5px] text-faint">
-                          {r.studentName} · handed in {timeAgo(r.submittedAt, now)} · {r.points} pts
-                        </p>
-                      </div>
-                      <Button variant="secondary" size="sm" onClick={() => actions.reviewSubmission(r.submissionId, "returned")}>
-                        Return
-                      </Button>
-                      <Button size="sm" onClick={() => actions.reviewSubmission(r.submissionId, "verified")}>
-                        Verify
-                      </Button>
-                    </li>
+                    <ReviewRow key={r.submission.id} review={r} now={now} />
                   ))}
                 </ul>
               )}
@@ -171,19 +192,22 @@ export function ClassDetailView({ classId }: { classId: string }) {
         </div>
 
         <div className="flex w-full flex-col gap-5 lg:w-[380px] lg:shrink-0">
+          {teaching && <RosterCard cls={cls} students={students} />}
           <FlashcardsCard decks={decks} onGenerate={generateDeck} />
-          <section className="flex flex-col gap-[11px] rounded-card bg-calm-gradient px-[18px] py-4">
-            <div className="flex items-center gap-2">
-              <LogoMark size={20} />
-              <h2 className="text-[13px] font-bold text-brand">Ready to prepare</h2>
-            </div>
-            <p className="text-[12.5px] leading-[19px] text-muted">
-              Clarion can build a deck from your {cls.name} notes, then check it against {cls.teacher}&apos;s handouts.
-            </p>
-            <Button variant="secondary" size="sm" full onClick={generateDeck}>
-              Generate a deck
-            </Button>
-          </section>
+          {!teaching && (
+            <section className="flex flex-col gap-[11px] rounded-card bg-sky-soft px-[18px] py-4">
+              <div className="flex items-center gap-2">
+                <LogoMark size={20} />
+                <h2 className="text-[13px] font-bold text-brand">Ready to prepare</h2>
+              </div>
+              <p className="text-[12.5px] leading-[19px] text-muted">
+                Clarion can build a deck from your {cls.name} notes, then check it against {cls.teacher}&apos;s handouts.
+              </p>
+              <Button variant="secondary" size="sm" full onClick={generateDeck}>
+                Generate a deck
+              </Button>
+            </section>
+          )}
         </div>
       </div>
 

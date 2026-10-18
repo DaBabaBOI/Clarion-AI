@@ -1,5 +1,5 @@
 import { addDays, diffDays, isWeekend, parseISODate, startOfWeek, toISODate } from "./dates";
-import type { AppState, Badge, LeaderboardEntry, Milestone, Task, Thread } from "./types";
+import type { AppState, Attachment, Badge, LeaderboardEntry, Member, Milestone, Submission, Task, Thread } from "./types";
 
 // Derived values. Components call these instead of re-deriving numbers so the
 // dashboard, top bar and Road to Glory always agree.
@@ -195,4 +195,103 @@ export function schoolBoard(state: AppState): BoardRow[] {
 
 export function dayIsPast(iso: string, today: Date): boolean {
   return parseISODate(iso) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+}
+
+// ── Attachments ─────────────────────────────────────────────────────────────
+
+/** Files and links shared with everyone on the task. */
+export function taskResources(state: AppState, taskId: string): Attachment[] {
+  return state.attachments.filter((a) => a.taskId === taskId && a.studentId === null);
+}
+
+/** The work one student attached to a task. */
+export function workFiles(state: AppState, taskId: string, studentId: string): Attachment[] {
+  return state.attachments.filter((a) => a.taskId === taskId && a.studentId === studentId);
+}
+
+// ── Staff ───────────────────────────────────────────────────────────────────
+
+export function isStaff(state: AppState): boolean {
+  return state.role !== "student";
+}
+
+export function teaches(state: AppState, classId: string | null | undefined): boolean {
+  return !!classId && state.teachingClassIds.includes(classId);
+}
+
+export function roster(state: AppState, classId: string): Member[] {
+  return state.members.filter((m) => m.classId === classId && m.role === "student").sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export interface Review {
+  submission: Submission;
+  task: Task;
+}
+
+/** Work handed in to classes the signed-in teacher teaches, oldest first. */
+export function pendingReviews(state: AppState, classId?: string): Review[] {
+  return state.submissions
+    .filter((s) => s.status === "submitted")
+    .flatMap((submission) => {
+      const task = state.tasks.find((t) => t.id === submission.taskId);
+      if (!task || !teaches(state, task.classId) || (classId && task.classId !== classId)) return [];
+      return [{ submission, task }];
+    })
+    .sort((a, b) => a.submission.submittedAt.localeCompare(b.submission.submittedAt));
+}
+
+/** How a class is getting on with one piece of work. */
+export function taskProgress(state: AppState, task: Task) {
+  const total = task.classId ? roster(state, task.classId).length : 0;
+  const subs = state.submissions.filter((s) => s.taskId === task.id);
+  const verified = subs.filter((s) => s.status === "verified").length;
+  const waiting = subs.filter((s) => s.status === "submitted").length;
+  return { total, verified, waiting, handedIn: verified + waiting, returned: subs.filter((s) => s.status === "returned").length };
+}
+
+export function staffStats(state: AppState, today: Date) {
+  const weekStart = toISODate(startOfWeek(today));
+  const weekEnd = toISODate(addDays(startOfWeek(today), 6));
+  const set = state.tasks.filter((t) => teaches(state, t.classId));
+  const students = new Set(state.members.filter((m) => m.role === "student" && teaches(state, m.classId)).map((m) => m.userId));
+  return {
+    toCheck: pendingReviews(state).length,
+    dueThisWeek: set.filter((t) => t.due >= weekStart && t.due <= weekEnd).length,
+    students: students.size,
+    verifiedThisWeek: state.submissions.filter((s) => s.status === "verified" && s.verifiedAt && s.verifiedAt.slice(0, 10) >= weekStart).length,
+  };
+}
+
+/** The newest post by a student in a class the teacher teaches. */
+export function latestStudentPost(state: AppState) {
+  let best: { thread: Thread; post: Thread["posts"][number] } | null = null;
+  for (const thread of state.threads) {
+    if (!teaches(state, thread.classId)) continue;
+    for (const post of thread.posts) {
+      if (post.role !== "student") continue;
+      if (!best || post.at > best.post.at) best = { thread, post };
+    }
+  }
+  return best;
+}
+
+/** What a teacher should do first, and why. */
+export function staffSuggestion(state: AppState, today: Date): string {
+  const queue = pendingReviews(state);
+  const oldest = queue[0];
+  if (oldest) {
+    const days = diffDays(toISODate(today), oldest.submission.submittedAt.slice(0, 10));
+    const wait = days >= 2 ? `has waited ${days} days` : days === 1 ? "came in yesterday" : "came in today";
+    return `Check ${oldest.submission.studentName}'s “${oldest.task.title}” first: it ${wait}. Points only reach students once you verify.`;
+  }
+  const todayISO = toISODate(today);
+  const next = sortTasks(state.tasks.filter((t) => teaches(state, t.classId) && t.due >= todayISO))[0];
+  if (next) {
+    const p = taskProgress(state, next);
+    const missing = p.total - p.handedIn;
+    return missing > 0
+      ? `Nothing to check. “${next.title}” is due ${next.due === todayISO ? "today" : "soon"} and ${missing} student${missing === 1 ? " has" : "s have"} not handed it in yet.`
+      : `Nothing to check, and everyone has handed in “${next.title}”.`;
+  }
+  return "Nothing to check and no deadlines coming up. Set the next piece of work when you are ready.";
 }

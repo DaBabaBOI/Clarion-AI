@@ -5,7 +5,7 @@ import { toast } from "@/lib/client-hooks";
 import { addDays, toISODate } from "@/lib/dates";
 import { actions } from "@/lib/store";
 import type { SchoolClass } from "@/lib/types";
-import { Button, Field, Modal, inputClass } from "../ui";
+import { Button, Field, Modal, cx, inputClass } from "../ui";
 
 /**
  * Students add personal reminders (never worth points). Teachers can also set
@@ -53,6 +53,7 @@ function AddTaskForm({
   const [classId, setClassId] = useState<string>(defaultClassId ?? "");
   const [due, setDue] = useState(() => toISODate(addDays(new Date(), 1)));
   const [points, setPoints] = useState(10);
+  const [details, setDetails] = useState("");
   const [saving, setSaving] = useState(false);
 
   return (
@@ -62,7 +63,7 @@ function AddTaskForm({
         e.preventDefault();
         if (!title.trim() || saving) return;
         setSaving(true);
-        const ok = await actions.addTask({ title, classId: classId || null, due, points: classId ? points : 0 });
+        const ok = await actions.addTask({ title, classId: classId || null, due, points: classId ? points : 0, details });
         setSaving(false);
         if (ok) {
           toast(classId ? "Work set for the class" : "Task added", "success");
@@ -113,6 +114,17 @@ function AddTaskForm({
           </Field>
         )}
       </div>
+      <Field label={classId ? "Instructions (optional)" : "Notes (optional)"} htmlFor="task-details">
+        <textarea
+          id="task-details"
+          className={cx(inputClass, "h-auto py-3 leading-[21px]")}
+          rows={3}
+          maxLength={4000}
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          placeholder={classId ? "What to do and what to hand in. You can attach files on the task page." : "Anything to remember"}
+        />
+      </Field>
       <div className="mt-1 flex justify-end gap-2.5">
         <Button variant="secondary" onClick={onDone}>
           Cancel

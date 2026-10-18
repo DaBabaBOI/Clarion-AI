@@ -109,7 +109,7 @@ function ThreadView({ state, thread, onBack }: { state: AppState; thread: Thread
           <button
             type="submit"
             disabled={!draft.trim()}
-            className="rounded-full bg-brand-gradient px-5 py-[9px] text-[13px] font-semibold text-white transition disabled:opacity-50"
+            className="rounded-full bg-brand px-5 py-[9px] text-[13px] font-semibold text-white transition hover:bg-brand-deep disabled:opacity-50"
           >
             Post
           </button>
@@ -180,7 +180,7 @@ export function DiscussionsView() {
                 onClick={() => setFilter(f.value)}
                 className={cx(
                   "rounded-full text-[11.5px] font-semibold transition",
-                  filter === f.value ? "bg-brand-gradient px-[11px] py-[5px] text-white" : "bg-canvas px-[9px] py-1 text-muted hover:text-ink",
+                  filter === f.value ? "bg-brand px-[11px] py-[5px] text-white" : "bg-canvas px-[9px] py-1 text-muted hover:text-ink",
                 )}
               >
                 {f.label}

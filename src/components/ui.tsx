@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
+import { classHref } from "@/lib/routes";
 import type { ClassColor, SchoolClass, TaskStatus } from "@/lib/types";
 import { CheckIcon, CloseIcon } from "./icons";
 
@@ -131,12 +132,22 @@ export function ClassChip({ cls, onWhite = false }: { cls: SchoolClass | null; o
   );
 }
 
+/** A class chip that opens the class. Sits above a row's own link (see TaskRow). */
+export function ClassChipLink({ cls }: { cls: SchoolClass | null }) {
+  if (!cls) return <ClassChip cls={null} />;
+  return (
+    <Link href={classHref(cls.id)} className="relative z-10 rounded-full transition hover:brightness-95" title={`Open ${cls.name}`}>
+      <ClassChip cls={cls} />
+    </Link>
+  );
+}
+
 // ── Buttons ─────────────────────────────────────────────────────────────────
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-brand-gradient text-white hover:brightness-105 active:brightness-95",
+  primary: "bg-brand text-white hover:bg-brand-deep",
   secondary: "border border-line bg-white text-ink hover:bg-canvas",
   ghost: "text-brand hover:bg-brand-soft",
 };
@@ -186,7 +197,7 @@ export function TextButton({ className, ...rest }: ComponentProps<"button">) {
 // ── Task checkbox ───────────────────────────────────────────────────────────
 
 /**
- * Three visual states: empty (open), gradient tick (handed in, waiting for the
+ * Three visual states: empty (open), purple tick (handed in, waiting for the
  * teacher) and green tick (verified). Verified tasks are locked.
  */
 export function TaskCheckbox({
@@ -223,7 +234,7 @@ export function TaskCheckbox({
       className={cx(
         "grid size-5 shrink-0 place-items-center rounded-[6px] text-white transition",
         status === "open" && "border-[1.5px] border-line bg-white hover:border-brand",
-        status === "submitted" && "bg-brand-gradient",
+        status === "submitted" && "bg-brand",
         status === "verified" && "bg-mint",
         verified && "cursor-default",
       )}
@@ -233,9 +244,18 @@ export function TaskCheckbox({
   );
 }
 
-export function StatusChip({ status, due }: { status: TaskStatus; due: { label: string; tone: "amber" | "sky" | "neutral" } }) {
+export function StatusChip({
+  status,
+  due,
+  returned = false,
+}: {
+  status: TaskStatus;
+  due: { label: string; tone: "amber" | "sky" | "neutral" };
+  returned?: boolean;
+}) {
   if (status === "verified") return <Chip tone="mint">Done</Chip>;
   if (status === "submitted") return <Chip tone="pending">Awaiting check</Chip>;
+  if (returned) return <Chip tone="amber">Returned</Chip>;
   return <Chip tone={due.tone}>{due.label}</Chip>;
 }
 
@@ -255,7 +275,7 @@ export function Avatar({ name, size = 32, me = false }: { name: string; size?: n
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
       className={cx(
         "grid shrink-0 place-items-center rounded-full font-semibold",
-        me ? "bg-brand-gradient text-white" : "bg-brand-soft text-brand",
+        me ? "bg-brand text-white" : "bg-brand-soft text-brand",
       )}
     >
       {initials}
@@ -275,7 +295,7 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
       onClick={() => onChange(!checked)}
       className={cx(
         "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-        checked ? "bg-brand-gradient" : "bg-line",
+        checked ? "bg-brand" : "bg-line",
       )}
     >
       <span
@@ -350,7 +370,7 @@ export function ProgressBar({ value, max, tone = "amber", label }: { value: numb
       aria-valuenow={value}
       className="h-1.5 w-full overflow-hidden rounded-full bg-canvas"
     >
-      <div className={cx("h-full rounded-full", tone === "amber" ? "bg-amber" : "bg-brand-gradient")} style={{ width: `${pct}%` }} />
+      <div className={cx("h-full rounded-full", tone === "amber" ? "bg-amber" : "bg-brand")} style={{ width: `${pct}%` }} />
     </div>
   );
 }

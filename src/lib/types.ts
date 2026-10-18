@@ -38,6 +38,46 @@ export interface Task {
   points: number;
   status: TaskStatus;
   submittedAt?: string; // ISO timestamp
+  details?: string; // the teacher's instructions, or notes on a reminder
+  returned?: boolean; // the teacher sent it back: open again until handed back in
+}
+
+/** A file or link on a task. */
+export interface Attachment {
+  id: string;
+  taskId: string;
+  /** null: a resource for everyone on the task. Set: work this student handed in. */
+  studentId: string | null;
+  kind: "file" | "link";
+  title: string;
+  /** Links, and files that ship with the demo or were added in it. */
+  url?: string;
+  /** Live files: the object's path in the task-files bucket. */
+  path?: string;
+  mimeType?: string;
+  size?: number; // bytes
+  addedBy: string;
+  mine: boolean;
+  at: string; // ISO timestamp
+}
+
+/** Someone in a class. Students see their classmates; teachers see their roster. */
+export interface Member {
+  classId: string;
+  userId: string;
+  name: string;
+  role: "teacher" | "student";
+}
+
+/** A hand-in. Students only ever have their own; teachers have their classes'. */
+export interface Submission {
+  id: string;
+  taskId: string;
+  studentId: string;
+  studentName: string;
+  status: "submitted" | "verified" | "returned";
+  submittedAt: string;
+  verifiedAt?: string;
 }
 
 export interface Post {
@@ -144,15 +184,28 @@ export interface ChatMessage {
   error?: boolean;
 }
 
-/** Handed-in work waiting for the signed-in teacher. */
-export interface PendingReview {
-  submissionId: string;
-  taskId: string;
-  classId: string;
-  title: string;
+/** A student's reward request waiting for a member of staff. */
+export interface RewardRequest {
+  id: string;
+  rewardTitle: string;
+  cost: number;
   studentName: string;
-  submittedAt: string;
-  points: number;
+  at: string;
+}
+
+/** One class in the coordinator's school overview: numbers only, no names. */
+export interface ClassOverview {
+  classId: string;
+  name: string;
+  color: ClassColor;
+  teachers: string;
+  students: number;
+  dueThisWeek: number;
+  waiting: number; // handed in, not yet checked
+  oldestWaiting: string | null;
+  missing: number; // due in the last two weeks and not handed in
+  verifiedThisWeek: number;
+  member: boolean; // the coordinator can open it
 }
 
 export type DataMode = "demo" | "live";
@@ -181,8 +234,14 @@ export interface AppState {
   aiContextClassId: string | null;
   discussionClassId: string | null;
   selectedThreadId: string | null;
-  // Classes the signed-in user teaches (live mode), and their marking queue.
+  attachments: Attachment[];
+  members: Member[];
+  submissions: Submission[];
+  // Staff only: the classes they teach, reward requests to approve, the
+  // leaderboard for each class they teach and (coordinators) the school.
   teachingClassIds: string[];
-  pendingReviews: PendingReview[];
+  rewardRequests: RewardRequest[];
+  classBoards: Record<string, LeaderboardEntry[]>;
+  schoolOverview: ClassOverview[] | null;
   conversationId: string | null;
 }

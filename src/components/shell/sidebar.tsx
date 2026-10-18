@@ -24,17 +24,14 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             aria-current={active ? "page" : undefined}
             className={cx(
               "flex items-center gap-[11px] rounded-control px-3 py-2.5 text-[13.5px] font-semibold transition-colors",
-              active ? "bg-brand-gradient text-white" : "text-muted hover:bg-canvas hover:text-ink",
+              active ? "bg-brand-soft text-brand" : "text-muted hover:bg-canvas hover:text-ink",
             )}
           >
-            <Icon className={active ? "text-white" : "text-faint"} />
+            <Icon className={active ? "text-brand" : "text-faint"} />
             <span className="flex-1">{label}</span>
             {href === "/discussions" && unread > 0 && (
               <span
-                className={cx(
-                  "grid min-w-[18px] place-items-center rounded-full px-1 text-[10.5px] font-bold leading-[18px]",
-                  active ? "bg-white text-brand" : "bg-brand text-white",
-                )}
+                className="grid min-w-[18px] place-items-center rounded-full bg-brand px-1 text-[10.5px] font-bold leading-[18px] text-white"
                 aria-label={`${unread} unread`}
               >
                 {unread}

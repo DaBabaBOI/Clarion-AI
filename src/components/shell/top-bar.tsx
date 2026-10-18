@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast, useNow } from "@/lib/client-hooks";
-import { classHref } from "@/lib/routes";
-import { balance, classById, streak } from "@/lib/selectors";
+import { classHref, taskHref } from "@/lib/routes";
+import { balance, classById, isStaff, pendingReviews, streak } from "@/lib/selectors";
 import { actions, auth, useAppState } from "@/lib/store";
-import type { AppState } from "@/lib/types";
+import type { AppState, Role } from "@/lib/types";
 import { CloseIcon, LogoMark, MenuIcon, SearchIcon } from "../icons";
-import { Avatar, Chip, ClassChip, cx } from "../ui";
+import { Avatar, Chip, ClassChip, Segmented, cx } from "../ui";
 import { SidebarNav, SidebarProfile } from "./sidebar";
 
 interface SearchResult {
@@ -39,7 +39,7 @@ function search(state: AppState, query: string): SearchResult[] {
         title: t.title,
         detail: classById(state, t.classId)?.name ?? "Personal",
         classId: t.classId,
-        href: t.classId ? classHref(t.classId) : "/dashboard",
+        href: taskHref(t.id),
       });
     }
   }
@@ -152,6 +152,12 @@ function SearchBox({
   );
 }
 
+const DEMO_ROLES: { value: Role; label: string }[] = [
+  { value: "student", label: "Student" },
+  { value: "teacher", label: "Teacher" },
+  { value: "admin", label: "Coordinator" },
+];
+
 function AccountMenu({ state }: { state: AppState | null }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -181,10 +187,10 @@ function AccountMenu({ state }: { state: AppState | null }) {
         onClick={() => setOpen((v) => !v)}
         className="grid size-8 place-items-center rounded-full"
       >
-        {state ? <Avatar name={state.student.fullName} me /> : <span className="size-8 rounded-full bg-brand-gradient" />}
+        {state ? <Avatar name={state.student.fullName} me /> : <span className="size-8 rounded-full bg-brand-soft" />}
       </button>
       {open && state && (
-        <div role="menu" className="absolute top-[calc(100%+8px)] right-0 z-40 w-60 rounded-[14px] border border-line bg-white p-1.5 shadow-pop">
+        <div role="menu" className="absolute top-[calc(100%+8px)] right-0 z-40 w-[280px] max-w-[calc(100vw-32px)] rounded-[14px] border border-line bg-white p-1.5 shadow-pop">
           <div className="px-3 py-2.5">
             <p className="text-[13px] font-semibold">{state.student.fullName}</p>
             <p className="truncate text-[11.5px] text-muted">{state.student.email}</p>
@@ -195,6 +201,21 @@ function AccountMenu({ state }: { state: AppState | null }) {
             </p>
           </div>
           <div className="my-1 h-px bg-line" />
+          {state.mode === "demo" && (
+            <div className="px-3 pt-1 pb-2.5">
+              <p className="mb-1.5 text-[11.5px] font-semibold text-muted">View the demo as</p>
+              <Segmented<Role>
+                label="View the demo as"
+                value={state.role}
+                onChange={(role) => {
+                  actions.switchDemoRole(role);
+                  setOpen(false);
+                  router.push("/dashboard");
+                }}
+                options={DEMO_ROLES}
+              />
+            </div>
+          )}
           {state.mode === "demo" && (
             <button
               type="button"
@@ -233,6 +254,7 @@ export function TopBar() {
   const [drawer, setDrawer] = useState(false);
   const days = state ? streak(state, now) : 0;
   const pts = state ? balance(state) : 0;
+  const toCheck = state ? pendingReviews(state).length : 0;
 
   return (
     <>
@@ -252,7 +274,14 @@ export function TopBar() {
         <span className="hidden w-2.5 md:block" />
         <SearchBox state={state} className="hidden w-[360px] md:block" />
         <div className="flex-1" />
-        {state && (
+        {state && isStaff(state) && (
+          <Link href="/dashboard">
+            <Chip tone={toCheck ? "amber" : "neutral"} className="text-[12px]">
+              {toCheck} to check
+            </Chip>
+          </Link>
+        )}
+        {state && !isStaff(state) && (
           <div className="flex items-center gap-2">
             <Link href="/road-to-glory" className="hidden sm:block">
               <Chip tone="amber" className="text-[12px]">

@@ -506,6 +506,70 @@ export type Database = {
         }
         Relationships: []
       }
+      task_attachments: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          kind: Database["public"]["Enums"]["attachment_kind"]
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string | null
+          student_id: string | null
+          task_id: string
+          title: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind: Database["public"]["Enums"]["attachment_kind"]
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string | null
+          student_id?: string | null
+          task_id: string
+          title: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["attachment_kind"]
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string | null
+          student_id?: string | null
+          task_id?: string
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_submissions: {
         Row: {
           id: string
@@ -735,9 +799,26 @@ export type Database = {
           year_group: string
         }[]
       }
+      school_overview: {
+        Args: never
+        Returns: {
+          class_id: string
+          color: Database["public"]["Enums"]["class_color"]
+          due_this_week: number
+          is_member: boolean
+          missing: number
+          name: string
+          oldest_waiting: string
+          students: number
+          teachers: string
+          verified_this_week: number
+          waiting: number
+        }[]
+      }
     }
     Enums: {
       ai_role: "user" | "assistant"
+      attachment_kind: "file" | "link"
       class_color: "mint" | "sky" | "brand" | "amber"
       redemption_status: "requested" | "approved" | "declined" | "unlocked"
       review_result: "again" | "good"
@@ -872,6 +953,7 @@ export const Constants = {
   public: {
     Enums: {
       ai_role: ["user", "assistant"],
+      attachment_kind: ["file", "link"],
       class_color: ["mint", "sky", "brand", "amber"],
       redemption_status: ["requested", "approved", "declined", "unlocked"],
       review_result: ["again", "good"],

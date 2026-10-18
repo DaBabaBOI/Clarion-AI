@@ -2,6 +2,7 @@
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
+import { fileProblem, readAsDataUrl, storagePath } from "./attachments";
 import { toast } from "./client-hooks";
 import { createDemoState, DEMO_VERSION } from "./demo-data";
 import { toISODate } from "./dates";
@@ -10,7 +11,7 @@ import { BASE_PATH } from "./routes";
 import { balance } from "./selectors";
 import { reply } from "./study-helper";
 import { getSupabase, isSupabaseConfigured } from "./supabase/client";
-import type { AppState, ChatMessage, Task, Thread } from "./types";
+import type { AppState, Attachment, ChatMessage, Role, Task, Thread } from "./types";
 
 // One store, two sources:
 //  • live: Supabase, as the signed-in user. Actions update the screen at once,
@@ -19,6 +20,7 @@ import type { AppState, ChatMessage, Task, Thread } from "./types";
 
 const STORAGE_KEY = "clarion-demo";
 const MODE_KEY = "clarion-mode";
+const ROLE_KEY = "clarion-demo-role";
 const JOIN_KEY = "clarion-join-code";
 
 export type StoreStatus = "idle" | "loading" | "ready" | "signed-out" | "error";
@@ -76,17 +78,23 @@ function writeLocal(key: string, value: string | null) {
   }
 }
 
+function demoRole(): Role {
+  const role = readLocal(ROLE_KEY);
+  return role === "teacher" || role === "admin" ? role : "student";
+}
+
 function loadDemo(): AppState {
+  const role = demoRole();
   const raw = readLocal(STORAGE_KEY);
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as AppState;
-      if (parsed.version === DEMO_VERSION) return parsed;
+      if (parsed.version === DEMO_VERSION && parsed.role === role) return parsed;
     } catch {
       // Corrupted data: start again.
     }
   }
-  return createDemoState(new Date());
+  return createDemoState(new Date(), role);
 }
 
 function setState(update: (s: AppState) => AppState) {
@@ -236,8 +244,10 @@ export const auth = {
     writeLocal(JOIN_KEY, code);
   },
 
-  startDemo() {
+  /** Explore Clarion on sample data, as a student, a teacher or a coordinator. */
+  startDemo(role: Role = "student") {
     writeLocal(MODE_KEY, "demo");
+    writeLocal(ROLE_KEY, role);
     resetStore();
   },
 
@@ -273,26 +283,39 @@ export const actions = {
     const task = state?.tasks.find((t) => t.id === id);
     if (!task || (task.classId && task.status === "verified")) return;
     const wasOpen = task.status === "open";
-    setState((s) =>
-      mapTask(s, id, (t) => {
+    const at = new Date().toISOString();
+    setState((s) => {
+      const next = mapTask(s, id, (t) => {
         if (!t.classId) return { ...t, status: wasOpen ? "verified" : "open" };
         return wasOpen
-          ? { ...t, status: "submitted", submittedAt: new Date().toISOString() }
+          ? { ...t, status: "submitted", submittedAt: at, returned: false }
           : { ...t, status: "open", submittedAt: undefined };
-      }),
-    );
+      });
+      if (!task.classId) return next;
+      const others = next.submissions.filter((x) => !(x.taskId === id && x.studentId === s.student.id));
+      return {
+        ...next,
+        submissions: wasOpen
+          ? [...others, { id: uid("sub"), taskId: id, studentId: s.student.id, studentName: s.student.shortName, status: "submitted", submittedAt: at }]
+          : others,
+      };
+    });
+    const sb = () => getSupabase().from("task_submissions");
     void sync(
       () =>
-        wasOpen
-          ? getSupabase().from("task_submissions").insert({ task_id: id, student_id: me() })
-          : getSupabase().from("task_submissions").delete().eq("task_id", id).eq("student_id", me()),
+        !wasOpen
+          ? sb().delete().eq("task_id", id).eq("student_id", me())
+          : task.returned
+            ? sb().update({ status: "submitted" }).eq("task_id", id).eq("student_id", me()) // handing returned work back in
+            : sb().insert({ task_id: id, student_id: me() }),
       wasOpen ? "Could not hand that in" : "Could not take that back",
     );
   },
 
   /** Students add personal reminders; teachers can set class work with points. */
-  async addTask(input: { title: string; classId: string | null; due: string; points?: number }) {
+  async addTask(input: { title: string; classId: string | null; due: string; points?: number; details?: string }) {
     const title = input.title.trim();
+    const details = input.details?.trim() || undefined;
     if (state?.mode === "live") {
       const today = toISODate(new Date());
       return sync(
@@ -300,8 +323,8 @@ export const actions = {
           input.classId
             ? getSupabase()
                 .from("tasks")
-                .insert({ class_id: input.classId, title, due_on: input.due, set_on: today, points: input.points ?? 0 })
-            : getSupabase().from("tasks").insert({ owner_id: me(), title, due_on: input.due, set_on: today }),
+                .insert({ class_id: input.classId, title, details, due_on: input.due, set_on: today, points: input.points ?? 0 })
+            : getSupabase().from("tasks").insert({ owner_id: me(), title, details, due_on: input.due, set_on: today }),
         "Could not add the task",
       );
     }
@@ -317,10 +340,132 @@ export const actions = {
           due: input.due,
           points: input.classId ? (input.points ?? 0) : 0,
           status: "open",
+          details,
         },
       ],
     }));
     return true;
+  },
+
+  /** Teachers edit the instructions on work they set; students edit notes on reminders. */
+  setTaskDetails(taskId: string, details: string) {
+    const text = details.trim();
+    setState((s) => mapTask(s, taskId, (t) => ({ ...t, details: text || undefined })));
+    void sync(() => getSupabase().from("tasks").update({ details: text || null }).eq("id", taskId), "Could not save the instructions");
+  },
+
+  /**
+   * Adds a link or file to a task: a resource for everyone (teachers, or the
+   * owner of a reminder) or, with `asWork`, the student's own work.
+   */
+  async addAttachment(
+    taskId: string,
+    input: { kind: "link"; title: string; url: string } | { kind: "file"; file: File },
+    asWork: boolean,
+  ): Promise<boolean> {
+    const s = state;
+    if (!s) return false;
+    const studentId = asWork ? s.student.id : null;
+    const at = new Date().toISOString();
+
+    if (input.kind === "file") {
+      const problem = fileProblem(input.file, s.mode === "demo");
+      if (problem) {
+        toast(problem);
+        return false;
+      }
+    }
+
+    if (s.mode === "demo") {
+      const base = { id: uid("a"), taskId, studentId, addedBy: s.student.shortName, mine: true, at };
+      let attachment: Attachment;
+      if (input.kind === "link") {
+        attachment = { ...base, kind: "link", title: input.title.trim() || input.url, url: input.url.trim() };
+      } else {
+        try {
+          const url = await readAsDataUrl(input.file);
+          attachment = { ...base, kind: "file", title: input.file.name, url, mimeType: input.file.type, size: input.file.size };
+        } catch {
+          toast("Could not read that file");
+          return false;
+        }
+      }
+      setState((prev) => ({ ...prev, attachments: [...prev.attachments, attachment] }));
+      return true;
+    }
+
+    const sb = getSupabase();
+    if (input.kind === "link") {
+      return sync(
+        () => sb.from("task_attachments").insert({ task_id: taskId, student_id: studentId, kind: "link", title: input.title.trim() || input.url, url: input.url.trim() }),
+        "Could not add the link",
+      );
+    }
+    // The row is the permission for the upload, so it goes in first; if the
+    // upload fails the row is removed again.
+    const path = storagePath(taskId, input.file.name);
+    const { data: row, error } = await sb
+      .from("task_attachments")
+      .insert({ task_id: taskId, student_id: studentId, kind: "file", title: input.file.name, storage_path: path, mime_type: input.file.type, size_bytes: input.file.size })
+      .select("id")
+      .single();
+    if (error || !row) {
+      toast(`Could not attach the file${error ? `: ${error.message}` : ""}`);
+      return false;
+    }
+    const upload = await sb.storage.from("task-files").upload(path, input.file, { contentType: input.file.type, upsert: false });
+    if (upload.error) {
+      await sb.from("task_attachments").delete().eq("id", row.id);
+      toast(`Could not upload the file: ${upload.error.message}`);
+      await refresh();
+      return false;
+    }
+    await refresh();
+    return true;
+  },
+
+  async removeAttachment(id: string) {
+    const attachment = state?.attachments.find((a) => a.id === id);
+    if (!attachment) return;
+    setState((s) => ({ ...s, attachments: s.attachments.filter((a) => a.id !== id) }));
+    if (state?.mode !== "live") return;
+    const sb = getSupabase();
+    if (attachment.path) {
+      const { error } = await sb.storage.from("task-files").remove([attachment.path]);
+      if (error) {
+        toast(`Could not remove the file: ${error.message}`);
+        await refresh();
+        return;
+      }
+    }
+    await sync(() => sb.from("task_attachments").delete().eq("id", id), "Could not remove that");
+  },
+
+  /** Opens a file in a new tab. Live files get a short-lived signed address. */
+  async openAttachment(attachment: Attachment) {
+    // Open the tab straight away so the browser treats it as the click's popup.
+    const tab = window.open("", "_blank");
+    let href: string | null = null;
+    if (attachment.path && state?.mode === "live") {
+      const { data, error } = await getSupabase().storage.from("task-files").createSignedUrl(attachment.path, 120);
+      href = error ? null : (data?.signedUrl ?? null);
+    } else if (attachment.url?.startsWith("data:")) {
+      const blob = await (await fetch(attachment.url)).blob();
+      href = URL.createObjectURL(blob);
+    } else if (attachment.url) {
+      href = attachment.url.startsWith("/") ? `${BASE_PATH}${attachment.url}` : attachment.url;
+    }
+    if (!href) {
+      tab?.close();
+      toast("Could not open that file. Try again in a moment.");
+      return;
+    }
+    if (tab) {
+      tab.opener = null;
+      tab.location.href = href;
+    } else {
+      window.location.href = href;
+    }
   },
 
   openThread(id: string) {
@@ -522,15 +667,42 @@ export const actions = {
 
   /** Teachers: verify handed-in work (pays the points) or return it. */
   reviewSubmission(submissionId: string, verdict: "verified" | "returned") {
-    setState((s) => ({ ...s, pendingReviews: s.pendingReviews.filter((r) => r.submissionId !== submissionId) }));
+    const at = new Date().toISOString();
+    setState((s) => ({
+      ...s,
+      submissions: s.submissions.map((x) =>
+        x.id === submissionId ? { ...x, status: verdict, verifiedAt: verdict === "verified" ? at : undefined } : x,
+      ),
+    }));
+    if (state?.mode === "demo") {
+      toast(verdict === "verified" ? "Verified. Points paid out." : "Returned to the student", "success");
+      return;
+    }
     void sync(
       () => getSupabase().from("task_submissions").update({ status: verdict }).eq("id", submissionId),
       verdict === "verified" ? "Could not verify that" : "Could not return that",
     ).then((ok) => ok && toast(verdict === "verified" ? "Verified. Points paid out." : "Returned to the student", "success"));
   },
 
+  /** Staff: approve or decline a student's reward request. Declined requests are refunded. */
+  decideReward(requestId: string, approve: boolean) {
+    setState((s) => ({ ...s, rewardRequests: s.rewardRequests.filter((r) => r.id !== requestId) }));
+    toast(approve ? "Approved. The student has been told." : "Declined. The points went back to the student.", "success");
+    void sync(
+      () => getSupabase().from("redemptions").update({ status: approve ? "approved" : "declined" }).eq("id", requestId),
+      "Could not save that decision",
+    );
+  },
+
   resetDemo() {
     if (state?.mode !== "demo") return;
-    setState(() => createDemoState(new Date()));
+    setState((s) => createDemoState(new Date(), s.role));
+  },
+
+  /** Demo only: see the same school as a student, a teacher or a coordinator. */
+  switchDemoRole(role: Role) {
+    if (state?.mode !== "demo") return;
+    writeLocal(ROLE_KEY, role);
+    setState(() => createDemoState(new Date(), role));
   },
 };

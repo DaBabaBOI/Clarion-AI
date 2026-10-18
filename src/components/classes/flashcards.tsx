@@ -35,7 +35,7 @@ export function FlipCard({ front, back }: { front: string; back: string }) {
       type="button"
       onClick={() => setFlipped((v) => !v)}
       aria-label={flipped ? `Answer: ${back}. Tap to see the question.` : `Question: ${front}. Tap to flip.`}
-      className="flex min-h-[128px] w-full flex-col items-center justify-center gap-2.5 rounded-[14px] bg-soft-gradient px-[18px] py-5 text-center transition hover:brightness-[0.99]"
+      className="flex min-h-[128px] w-full flex-col items-center justify-center gap-2.5 rounded-[14px] bg-brand-soft px-[18px] py-5 text-center transition hover:brightness-[0.99]"
     >
       <span className="text-[10px] font-bold tracking-wide text-brand">{flipped ? "BACK" : "FRONT"}</span>
       <span className="max-w-[270px] text-[15.5px] font-semibold leading-[22px] text-ink">{flipped ? back : front}</span>

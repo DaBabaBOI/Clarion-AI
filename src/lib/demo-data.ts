@@ -1,11 +1,12 @@
 import { addDays, schoolDaysAhead, schoolDaysBack, toISODate, weekdayName } from "./dates";
-import type { AppState, Deck, LedgerEntry, Task, Thread } from "./types";
+import { demoMembers, rosterSize, staffDemo } from "./demo-staff";
+import type { AppState, Attachment, Deck, LedgerEntry, Role, Submission, Task, Thread } from "./types";
 
 // Demo content shown until the app is connected to Supabase. Every date is
 // relative to the day the demo is first opened so "Overdue", "Today" and the
 // streak always read correctly.
 
-export const DEMO_VERSION = 2;
+export const DEMO_VERSION = 3;
 
 function hoursAgo(now: Date, h: number): string {
   return new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
@@ -15,22 +16,102 @@ function minutesAgo(now: Date, m: number): string {
   return new Date(now.getTime() - m * 60 * 1000).toISOString();
 }
 
-export function createDemoState(now: Date): AppState {
+// The teacher's instructions on each piece of class work.
+const DETAILS: Record<string, string> = {
+  "t-bio-worksheet":
+    "Label the animal and plant cell diagrams on the worksheet, then answer questions 1 to 8.\nUse full sentences for questions 6 to 8.\nHand in a photo or scan of both pages.",
+  "t-bio-reading":
+    "Read pages 3 to 6 of the Unit 2 booklet (cells and organisation).\nThen do the self check on page 7 and mark it with the answers at the back.\nWrite down one question to bring to the next lesson.",
+  "t-bio-notes":
+    "Make one page of revision notes covering:\n- the word and symbol equations\n- where photosynthesis happens in the leaf\n- the three limiting factors\nDiagrams are welcome.",
+  "t-bio-lab": "Read the lab safety rules with a parent or carer, then sign and hand in the form.",
+  "t-maths-quadratics": "Questions 1 to 12 from the problem set. Show your working for every question.\nQuestions 10 to 12 are stretch questions: try at least one.",
+  "t-maths-square": "Exercise 4C, odd numbers from 1 to 15.\nCheck each answer by expanding the brackets back out.",
+  "t-eng-essay":
+    "Write the first draft of your persuasive essay on the topic we chose in class.\nAim for 800 to 1,000 words: an introduction with a clear thesis, three body paragraphs with evidence, and a conclusion.",
+  "t-his-sources":
+    "List at least six sources for your Unit 2 investigation, including two primary sources.\nFor each one give the author, date and type of source, and one sentence on why it is useful.",
+  "t-his-annotations": "Annotate the two primary sources from the lesson: who made it, when, why, and what it tells us.",
+};
+
+/** Sample content for trying Clarion without an account, as a student, teacher or coordinator. */
+export function createDemoState(now: Date, role: Role = "student"): AppState {
+  const student = studentDemo(now);
+  return role === "student" ? student : staffDemo(student, role, now);
+}
+
+function studentDemo(now: Date): AppState {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const day = (offset: number) => toISODate(addDays(today, offset));
   const testDay = weekdayName(schoolDaysAhead(today, 3));
 
-  const tasks: Task[] = [
-    { id: "t-bio-worksheet", classId: "bio-9", title: "Cell structure worksheet", setOn: day(-5), due: day(-1), points: 20, status: "open" },
-    { id: "t-bio-reading", classId: "bio-9", title: "Read pages 3 to 6 and self check", setOn: day(-1), due: day(0), points: 10, status: "open" },
-    { id: "t-bio-notes", classId: "bio-9", title: "Photosynthesis revision notes", setOn: day(-1), due: day(2), points: 15, status: "open" },
-    { id: "t-bio-lab", classId: "bio-9", title: "Lab safety form", setOn: day(-15), due: day(-10), points: 5, status: "verified" },
-    { id: "t-maths-quadratics", classId: "maths-9", title: "Quadratics problem set", setOn: day(-3), due: day(1), points: 20, status: "open" },
-    { id: "t-maths-square", classId: "maths-9", title: "Completing the square practice", setOn: day(-1), due: day(5), points: 15, status: "open" },
-    { id: "t-eng-essay", classId: "eng-9", title: "Essay first draft", setOn: day(-6), due: day(2), points: 25, status: "open" },
-    { id: "t-his-sources", classId: "his-9", title: "Unit 2 source list", setOn: day(-9), due: day(-2), points: 10, status: "submitted", submittedAt: hoursAgo(now, 26) },
-    { id: "t-his-annotations", classId: "his-9", title: "Primary source annotations", setOn: day(-12), due: day(-4), points: 15, status: "verified" },
+  const tasks: Task[] = (
+    [
+      { id: "t-bio-worksheet", classId: "bio-9", title: "Cell structure worksheet", setOn: day(-5), due: day(-1), points: 20, status: "open" },
+      { id: "t-bio-reading", classId: "bio-9", title: "Read pages 3 to 6 and self check", setOn: day(-1), due: day(0), points: 10, status: "open" },
+      { id: "t-bio-notes", classId: "bio-9", title: "Photosynthesis revision notes", setOn: day(-1), due: day(2), points: 15, status: "open" },
+      { id: "t-bio-lab", classId: "bio-9", title: "Lab safety form", setOn: day(-15), due: day(-10), points: 5, status: "verified" },
+      { id: "t-maths-quadratics", classId: "maths-9", title: "Quadratics problem set", setOn: day(-3), due: day(1), points: 20, status: "open" },
+      { id: "t-maths-square", classId: "maths-9", title: "Completing the square practice", setOn: day(-1), due: day(5), points: 15, status: "open" },
+      { id: "t-eng-essay", classId: "eng-9", title: "Essay first draft", setOn: day(-6), due: day(2), points: 25, status: "open" },
+      { id: "t-his-sources", classId: "his-9", title: "Unit 2 source list", setOn: day(-9), due: day(-2), points: 10, status: "submitted", submittedAt: hoursAgo(now, 26) },
+      { id: "t-his-annotations", classId: "his-9", title: "Primary source annotations", setOn: day(-12), due: day(-4), points: 15, status: "verified" },
+    ] satisfies Task[]
+  ).map((t) => ({ ...t, details: DETAILS[t.id] }));
+
+  // Files and links the teachers shared, and the source list Prithu handed in.
+  const resource = (id: string, taskId: string, kind: Attachment["kind"], title: string, url: string, addedBy: string, size?: number): Attachment => ({
+    id,
+    taskId,
+    studentId: null,
+    kind,
+    title,
+    url,
+    mimeType: kind === "file" ? "application/pdf" : undefined,
+    size,
+    addedBy,
+    mine: false,
+    at: hoursAgo(now, 72),
+  });
+  const attachments: Attachment[] = [
+    resource("a-cells-sheet", "t-bio-worksheet", "file", "Cell structure worksheet.pdf", "/demo/cell-structure-worksheet.pdf", "Ms Kaushal", 1423),
+    resource("a-cells-wiki", "t-bio-worksheet", "link", "Cell (biology), Wikipedia", "https://en.wikipedia.org/wiki/Cell_(biology)", "Ms Kaushal"),
+    resource("a-photo-wiki", "t-bio-notes", "link", "Photosynthesis, Wikipedia", "https://en.wikipedia.org/wiki/Photosynthesis", "Ms Kaushal"),
+    resource("a-quad-sheet", "t-maths-quadratics", "file", "Quadratics problem set.pdf", "/demo/quadratics-problem-set.pdf", "Mr Iyer", 1355),
+    resource("a-square-wiki", "t-maths-square", "link", "Completing the square, Wikipedia", "https://en.wikipedia.org/wiki/Completing_the_square", "Mr Iyer"),
+    resource("a-essay-sheet", "t-eng-essay", "file", "Essay planning sheet.pdf", "/demo/essay-planning-sheet.pdf", "Ms Rao", 1259),
+    resource(
+      "a-essay-owl",
+      "t-eng-essay",
+      "link",
+      "Thesis statement tips, Purdue OWL",
+      "https://owl.purdue.edu/owl/general_writing/the_writing_process/thesis_statement_tips.html",
+      "Ms Rao",
+    ),
+    {
+      id: "a-my-sources",
+      taskId: "t-his-sources",
+      studentId: "me",
+      kind: "file",
+      title: "Unit 2 source list.pdf",
+      url: "/demo/unit-2-source-list.pdf",
+      mimeType: "application/pdf",
+      size: 1339,
+      addedBy: "Prithu S.",
+      mine: true,
+      at: hoursAgo(now, 26),
+    },
   ];
+  const submissions: Submission[] = tasks
+    .filter((t) => t.classId && t.status !== "open")
+    .map((t) => ({
+      id: `sub-${t.id}`,
+      taskId: t.id,
+      studentId: "me",
+      studentName: "Prithu S.",
+      status: t.status === "verified" ? "verified" : "submitted",
+      submittedAt: t.submittedAt ?? `${t.due}T15:00:00.000Z`,
+    }));
 
   // Teacher-verified points. Four school days in a row gives the 4 day streak.
   const earned: [number, number, string, string][] = [
@@ -250,10 +331,10 @@ export function createDemoState(now: Date): AppState {
       email: "prithu@dpsiedge.edu.in",
     },
     classes: [
-      { id: "bio-9", name: "Biology 9", teacher: "Ms Kaushal", color: "mint", code: "7K2H9B", studentCount: 28 },
-      { id: "maths-9", name: "Maths 9", teacher: "Mr Iyer", color: "sky", code: "M9X4QT", studentCount: 30 },
-      { id: "eng-9", name: "English 9", teacher: "Ms Rao", color: "brand", code: "E9R2WK", studentCount: 27 },
-      { id: "his-9", name: "History 9", teacher: "Mr Banerjee", color: "amber", code: "H9P7LN", studentCount: 29 },
+      { id: "bio-9", name: "Biology 9", teacher: "Ms Kaushal", color: "mint", code: "7K2H9B", studentCount: rosterSize("bio-9") },
+      { id: "maths-9", name: "Maths 9", teacher: "Mr Iyer", color: "sky", code: "M9X4QT", studentCount: rosterSize("maths-9") },
+      { id: "eng-9", name: "English 9", teacher: "Ms Rao", color: "brand", code: "E9R2WK", studentCount: rosterSize("eng-9") },
+      { id: "his-9", name: "History 9", teacher: "Mr Banerjee", color: "amber", code: "H9P7LN", studentCount: rosterSize("his-9") },
     ],
     tasks,
     threads,
@@ -340,8 +421,13 @@ export function createDemoState(now: Date): AppState {
     aiContextClassId: null,
     discussionClassId: null,
     selectedThreadId: null,
+    attachments,
+    members: demoMembers(["bio-9", "maths-9", "eng-9", "his-9"], "me"),
+    submissions,
     teachingClassIds: [],
-    pendingReviews: [],
+    rewardRequests: [],
+    classBoards: {},
+    schoolOverview: null,
     conversationId: null,
   };
 }

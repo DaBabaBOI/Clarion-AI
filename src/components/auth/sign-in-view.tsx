@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/store";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import type { Role } from "@/lib/types";
 import { CODE_LENGTH, CodeInput } from "../code-input";
 import { LogoMark } from "../icons";
 import { Button, Field, cx, inputClass } from "../ui";
@@ -38,6 +39,12 @@ function useGoogleEnabled() {
   }, []);
   return enabled;
 }
+
+const DEMO_ROLES: { role: Role; label: string }[] = [
+  { role: "student", label: "Student" },
+  { role: "teacher", label: "Teacher" },
+  { role: "admin", label: "Coordinator" },
+];
 
 export function SignInView() {
   const router = useRouter();
@@ -117,7 +124,7 @@ export function SignInView() {
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
-      <section className="flex flex-col justify-center bg-soft-gradient px-6 py-10 sm:px-16 lg:w-[620px] lg:shrink-0 lg:py-16">
+      <section className="flex flex-col justify-center bg-brand-soft px-6 py-10 sm:px-16 lg:w-[620px] lg:shrink-0 lg:py-16">
         <div className="flex items-center gap-3">
           <LogoMark size={40} />
           <span className="text-[24px] font-bold">Clarion</span>
@@ -131,7 +138,7 @@ export function SignInView() {
         <ul className="mt-[34px] hidden flex-col gap-3.5 sm:flex">
           {FEATURES.map((f) => (
             <li key={f} className="flex items-center gap-3 text-[14.5px]">
-              <span className="size-5 shrink-0 rounded-full bg-brand-gradient" aria-hidden="true" />
+              <span className="size-5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
               {f}
             </li>
           ))}
@@ -273,18 +280,24 @@ export function SignInView() {
             </p>
           )}
 
-          <div className="mt-6 flex items-center justify-between gap-3 rounded-control bg-canvas px-3.5 py-3">
-            <p className="text-[12px] leading-[18px] text-muted">No account yet? Try Clarion with sample classes.</p>
-            <button
-              type="button"
-              onClick={() => {
-                auth.startDemo();
-                router.push("/dashboard");
-              }}
-              className="shrink-0 text-[12.5px] font-semibold text-brand hover:underline underline-offset-2"
-            >
-              Explore the demo
-            </button>
+          <div className="mt-6 rounded-control bg-canvas px-3.5 py-3">
+            <p className="text-[12px] leading-[18px] text-muted">No account yet? Explore the demo with sample classes, as a</p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {DEMO_ROLES.map((r) => (
+                <button
+                  key={r.role}
+                  type="button"
+                  aria-label={`Explore the demo as a ${r.label.toLowerCase()}`}
+                  onClick={() => {
+                    auth.startDemo(r.role);
+                    router.push("/dashboard");
+                  }}
+                  className="rounded-full border border-line bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-brand transition hover:bg-brand-soft"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>

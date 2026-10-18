@@ -5,10 +5,10 @@ import { useState } from "react";
 import { useNow } from "@/lib/client-hooks";
 import { diffDays, dueLabel, numberWord, toISODate } from "@/lib/dates";
 import { classHref } from "@/lib/routes";
-import { cardsInClass, nextDeadline, taskStats, unreadPosts } from "@/lib/selectors";
+import { cardsInClass, isStaff, nextDeadline, pendingReviews, roster, taskProgress, taskStats, teaches, unreadPosts } from "@/lib/selectors";
 import { useAppState } from "@/lib/store";
 import type { AppState, SchoolClass } from "@/lib/types";
-import { Button, ButtonLink, CLASS_SWATCH, Chip, PageHeader, StatusChip, cx } from "../ui";
+import { Button, ButtonLink, CLASS_SWATCH, Chip, EmptyState, PageHeader, StatusChip, cx } from "../ui";
 import { JoinClassModal } from "./join-class-modal";
 
 function Count({ value, label, tone }: { value: number; label: string; tone: string }) {
@@ -21,9 +21,18 @@ function Count({ value, label, tone }: { value: number; label: string; tone: str
 }
 
 function ClassCard({ state, cls, today }: { state: AppState; cls: SchoolClass; today: string }) {
+  const teaching = teaches(state, cls.id);
   const open = state.tasks.filter((t) => t.classId === cls.id && t.status === "open");
-  const overdue = open.some((t) => diffDays(t.due, today) < 0);
-  const next = nextDeadline(state, cls.id);
+  const reviews = teaching ? pendingReviews(state, cls.id) : [];
+  // Students: something is overdue. Teachers: work has waited two days or more to be checked.
+  const attention = teaching
+    ? reviews.some((r) => diffDays(today, r.submission.submittedAt.slice(0, 10)) >= 2)
+    : open.some((t) => diffDays(t.due, today) < 0);
+  const next = teaching
+    ? (state.tasks.filter((t) => t.classId === cls.id && t.due >= today).sort((a, b) => a.due.localeCompare(b.due))[0] ?? null)
+    : nextDeadline(state, cls.id);
+  const progress = teaching && next ? taskProgress(state, next) : null;
+  const due = next ? dueLabel(next.due, today) : null;
   const href = classHref(cls.id);
 
   return (
@@ -36,9 +45,9 @@ function ClassCard({ state, cls, today }: { state: AppState; cls: SchoolClass; t
               {cls.name}
             </Link>
           </h2>
-          <p className="text-[12.5px] text-muted">{cls.teacher}</p>
+          <p className="text-[12.5px] text-muted">{teaching ? `Code ${cls.code}` : cls.teacher}</p>
         </div>
-        {overdue && (
+        {attention && (
           <Chip tone="solid-amber" size="sm">
             Needs attention
           </Chip>
@@ -46,17 +55,32 @@ function ClassCard({ state, cls, today }: { state: AppState; cls: SchoolClass; t
       </div>
       <div className="h-px bg-line" />
       <div className="flex gap-[34px]">
-        <Count value={open.length} label="tasks due" tone="text-amber" />
-        <Count value={unreadPosts(state, cls.id)} label="new posts" tone="text-brand" />
-        <Count value={cardsInClass(state, cls.id)} label="flashcards" tone="text-sky" />
+        {teaching ? (
+          <>
+            <Count value={reviews.length} label="to check" tone="text-amber" />
+            <Count value={roster(state, cls.id).length} label="students" tone="text-brand" />
+            <Count value={unreadPosts(state, cls.id)} label="new posts" tone="text-sky" />
+          </>
+        ) : (
+          <>
+            <Count value={open.length} label="tasks due" tone="text-amber" />
+            <Count value={unreadPosts(state, cls.id)} label="new posts" tone="text-brand" />
+            <Count value={cardsInClass(state, cls.id)} label="flashcards" tone="text-sky" />
+          </>
+        )}
       </div>
       <div className="flex items-center gap-2.5 rounded-[11px] bg-canvas px-3 py-2.5">
         <p className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-muted">
           {next ? `Next: ${next.title}` : "No deadlines set"}
         </p>
-        {next && <StatusChip status={next.status} due={dueLabel(next.due, today)} />}
+        {progress && (
+          <Chip tone="neutral">
+            {progress.handedIn}/{progress.total} in
+          </Chip>
+        )}
+        {next && due && (progress ? <Chip tone={due.tone}>{due.label}</Chip> : <StatusChip status={next.status} due={due} returned={next.returned} />)}
       </div>
-      <ButtonLink href={href} size="sm" full variant={overdue ? "primary" : "secondary"}>
+      <ButtonLink href={href} size="sm" full variant="secondary">
         Open class
       </ButtonLink>
     </article>
@@ -69,18 +93,29 @@ export function ClassesView() {
   const today = toISODate(now);
   const [joining, setJoining] = useState(false);
   const { open } = taskStats(state, now);
+  const staff = isStaff(state);
+  const toCheck = pendingReviews(state).length;
 
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
         title="My classes"
-        subtitle={`${numberWord(state.classes.length)} classes this term, ${numberWord(open, true)} task${open === 1 ? "" : "s"} still open.`}
+        subtitle={
+          staff
+            ? `You teach ${numberWord(state.teachingClassIds.length, true)} class${state.teachingClassIds.length === 1 ? "" : "es"}, ${numberWord(toCheck, true)} piece${toCheck === 1 ? "" : "s"} of work to check.`
+            : `${numberWord(state.classes.length)} classes this term, ${numberWord(open, true)} task${open === 1 ? "" : "s"} still open.`
+        }
         actions={
-          <Button variant="secondary" onClick={() => setJoining(true)}>
-            Join a class
-          </Button>
+          !staff && (
+            <Button variant="secondary" onClick={() => setJoining(true)}>
+              Join a class
+            </Button>
+          )
         }
       />
+      {state.classes.length === 0 && (
+        <EmptyState title="No classes yet" body="Classes you teach or join show up here." />
+      )}
       <div className="grid gap-[18px] md:grid-cols-2">
         {state.classes.map((c) => (
           <ClassCard key={c.id} state={state} cls={c} today={today} />

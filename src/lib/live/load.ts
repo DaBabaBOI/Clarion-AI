@@ -4,17 +4,21 @@ import { streak, suggestion } from "../selectors";
 import { getSupabase } from "../supabase/client";
 import type {
   AppState,
+  Attachment,
   Badge,
   ChatMessage,
   ClassColor,
+  ClassOverview,
   Deck,
   LeaderboardEntry,
   LedgerEntry,
-  PendingReview,
+  Member,
   Reward,
+  RewardRequest,
   Role,
   SchoolClass,
   Source,
+  Submission,
   Task,
   Thread,
 } from "../types";
@@ -74,12 +78,16 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     matesRes,
     schoolRes,
     chatRes,
+    attachmentsRes,
+    requestsRes,
   ] = await Promise.all([
     sb.from("profiles").select("full_name, role, year_group, show_on_leaderboard").eq("id", me).single(),
     sb.from("classes").select("id, name, color, join_code").order("name"),
     sb.from("class_members").select("class_id, user_id, role, profiles(full_name)"),
-    sb.from("tasks").select("id, class_id, owner_id, title, set_on, due_on, points"),
-    sb.from("task_submissions").select("id, task_id, student_id, status, submitted_at, profiles!task_submissions_student_id_fkey(full_name)"),
+    sb.from("tasks").select("id, class_id, owner_id, title, details, set_on, due_on, points"),
+    sb
+      .from("task_submissions")
+      .select("id, task_id, student_id, status, submitted_at, verified_at, profiles!task_submissions_student_id_fkey(full_name)"),
     sb.from("threads").select("id, class_id, author_id, title, visibility, pinned"),
     sb.from("posts").select("id, thread_id, author_id, body, created_at").order("created_at"),
     sb.from("thread_reads").select("thread_id, last_read_at").eq("user_id", me),
@@ -97,9 +105,12 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    sb.from("task_attachments").select("id, task_id, student_id, kind, title, url, storage_path, mime_type, size_bytes, created_by, created_at").order("created_at"),
+    // Staff see the school's open requests; for students this is only their own.
+    sb.from("redemptions").select("id, created_at, rewards(title, cost), profiles(full_name)").eq("status", "requested").order("created_at"),
   ]);
 
-  const firstError = [profileRes, classesRes, membersRes, tasksRes, subsRes, threadsRes, postsRes, decksRes, ledgerRes].find(
+  const firstError = [profileRes, classesRes, membersRes, tasksRes, subsRes, threadsRes, postsRes, decksRes, ledgerRes, attachmentsRes].find(
     (r) => r.error,
   )?.error;
   if (firstError) throw new Error(firstError.message);
@@ -116,6 +127,14 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     roleInClass.set(`${m.class_id}:${m.user_id}`, m.role as Role);
   }
   const teachingClassIds = (membersRes.data ?? []).filter((m) => m.user_id === me && m.role === "teacher").map((m) => m.class_id);
+  const members: Member[] = (membersRes.data ?? [])
+    .filter((m) => m.user_id !== me)
+    .map((m) => ({
+      classId: m.class_id,
+      userId: m.user_id,
+      name: m.profiles?.full_name ?? "Student",
+      role: m.role === "student" ? "student" : "teacher",
+    }));
 
   const classes: SchoolClass[] = (classesRes.data ?? []).map((c) => {
     const members = (membersRes.data ?? []).filter((m) => m.class_id === c.id);
@@ -145,29 +164,37 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
       due: t.due_on,
       points: t.points,
       status,
-      submittedAt: sub?.submitted_at,
+      submittedAt: status === "open" ? undefined : sub?.submitted_at,
+      details: t.details ?? undefined,
+      returned: sub?.status === "returned",
     };
   });
 
   const taskById = new Map((tasksRes.data ?? []).map((t) => [t.id, t]));
-  const pendingReviews: PendingReview[] = (subsRes.data ?? [])
-    .filter((s) => s.status === "submitted" && s.student_id !== me)
-    .flatMap((s) => {
-      const t = taskById.get(s.task_id);
-      if (!t?.class_id || !teachingClassIds.includes(t.class_id)) return [];
-      return [
-        {
-          submissionId: s.id,
-          taskId: t.id,
-          classId: t.class_id,
-          title: t.title,
-          studentName: s.profiles?.full_name ?? "Student",
-          submittedAt: s.submitted_at,
-          points: t.points,
-        },
-      ];
-    })
-    .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+  const submissions: Submission[] = (subsRes.data ?? []).map((s) => ({
+    id: s.id,
+    taskId: s.task_id,
+    studentId: s.student_id,
+    studentName: s.student_id === me ? fullName : (s.profiles?.full_name ?? "Student"),
+    status: s.status,
+    submittedAt: s.submitted_at,
+    verifiedAt: s.verified_at ?? undefined,
+  }));
+
+  const attachments: Attachment[] = (attachmentsRes.data ?? []).map((a) => ({
+    id: a.id,
+    taskId: a.task_id,
+    studentId: a.student_id,
+    kind: a.kind,
+    title: a.title,
+    url: a.url ?? undefined,
+    path: a.storage_path ?? undefined,
+    mimeType: a.mime_type ?? undefined,
+    size: a.size_bytes ?? undefined,
+    addedBy: names.get(a.created_by) ?? "Teacher",
+    mine: a.created_by === me,
+    at: a.created_at,
+  }));
 
   // Discussions
   const lastRead = new Map((readsRes.data ?? []).map((r) => [r.thread_id, r.last_read_at]));
@@ -252,6 +279,44 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
       };
     });
 
+  // Staff extras: reward requests to approve, a leaderboard per class taught and,
+  // for coordinators, the school overview.
+  const staff = role !== "student";
+  const rewardRequests: RewardRequest[] = staff
+    ? (requestsRes.data ?? []).map((r) => ({
+        id: r.id,
+        rewardTitle: r.rewards?.title ?? "Reward",
+        cost: r.rewards?.cost ?? 0,
+        studentName: r.profiles?.full_name ?? "A student",
+        at: r.created_at,
+      }))
+    : [];
+  const [boardResults, overviewRes] = await Promise.all([
+    Promise.all(teachingClassIds.map((id) => sb.rpc("class_leaderboard", { target_class: id }))),
+    role === "admin" ? sb.rpc("school_overview") : Promise.resolve(null),
+  ]);
+  const classBoards: Record<string, LeaderboardEntry[]> = Object.fromEntries(
+    teachingClassIds.map((id, i) => [
+      id,
+      (boardResults[i].data ?? []).map((r, j) => ({ id: `${id}-${j}`, name: r.display_name, points: r.points })),
+    ]),
+  );
+  const schoolOverview: ClassOverview[] | null = overviewRes
+    ? (overviewRes.data ?? []).map((c) => ({
+        classId: c.class_id,
+        name: c.name,
+        color: c.color as ClassColor,
+        teachers: c.teachers,
+        students: c.students,
+        dueThisWeek: c.due_this_week,
+        waiting: c.waiting,
+        oldestWaiting: c.oldest_waiting,
+        missing: c.missing,
+        verifiedThisWeek: c.verified_this_week,
+        member: c.is_member,
+      }))
+    : null;
+
   const now = new Date();
   const base = createDemoState(now);
   const state: AppState = {
@@ -263,7 +328,7 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
       fullName,
       firstName: fullName.split(/\s+/)[0],
       shortName: shortName(fullName),
-      yearGroup: role === "admin" ? "Principal" : role === "teacher" ? "Teacher" : profile.year_group ?? "",
+      yearGroup: role === "admin" ? "Coordinator" : role === "teacher" ? "Teacher" : profile.year_group ?? "",
       email: user.email ?? "",
     },
     classes,
@@ -281,8 +346,13 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     aiContextClassId: prev?.aiContextClassId ?? null,
     discussionClassId: prev?.discussionClassId ?? null,
     selectedThreadId: prev?.selectedThreadId ?? null,
+    attachments,
+    members,
+    submissions,
     teachingClassIds,
-    pendingReviews,
+    rewardRequests,
+    classBoards,
+    schoolOverview,
     conversationId: conversation?.id ?? null,
   };
 

@@ -10,6 +10,7 @@ import {
   classById,
   dayIsPast,
   earnedPoints,
+  isStaff,
   milestoneProgress,
   pendingPoints,
   pointsByDay,
@@ -22,6 +23,7 @@ import {
 import { actions, useAppState } from "@/lib/store";
 import type { AppState, Badge, Milestone, Reward } from "@/lib/types";
 import { CheckIcon, LockIcon, RewardGlyph } from "../icons";
+import { StaffGloryView } from "./staff-glory";
 import {
   Avatar,
   Button,
@@ -100,7 +102,7 @@ function RoadCard({ milestones, points }: { milestones: Milestone[]; points: num
                   aria-label={`${m.title}, ${m.points} points, ${done ? "reached" : "locked"}`}
                   className={cx(
                     "absolute top-0 grid size-10 -translate-x-1/2 place-items-center rounded-[2px] text-[13px] font-bold transition",
-                    done && "bg-brand-gradient text-white",
+                    done && "bg-brand text-white",
                     isNext && "border-[1.5px] border-dashed border-brand bg-white text-brand",
                     !done && !isNext && "border border-dashed border-faint bg-canvas text-faint",
                     selected.id === m.id && "ring-2 ring-brand/30 ring-offset-2",
@@ -234,7 +236,7 @@ function WaitingCard({ state, now }: { state: AppState; now: Date }) {
           ))}
         </ul>
       )}
-      <p className="rounded-[12px] bg-calm-gradient px-3.5 py-3 text-[12.5px] leading-[19px] text-muted">
+      <p className="rounded-[12px] bg-canvas px-3.5 py-3 text-[12.5px] leading-[19px] text-muted">
         <span className="font-semibold text-ink">Why points wait. </span>A task only pays out once your teacher marks it
         complete, so nobody can tick their way up the leaderboard.
       </p>
@@ -298,7 +300,7 @@ const RANK_STYLE: Record<number, string> = {
   3: "border-bronze bg-bronze-soft text-bronze",
 };
 
-function BoardRowView({ row, hidden, school }: { row: BoardRow; hidden: boolean; school: boolean }) {
+export function BoardRowView({ row, hidden, school }: { row: BoardRow; hidden: boolean; school: boolean }) {
   const name = row.me ? (hidden ? "You (hidden)" : `${row.name} (you)`) : school ? `Student · ${row.group}` : row.name;
   return (
     <li className={cx("flex items-center gap-3 px-2 py-2.5", row.me && "rounded-[12px] bg-brand-soft")}>
@@ -464,6 +466,11 @@ function SpendCard({ state }: { state: AppState }) {
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export function RoadToGloryView() {
+  const state = useAppState()!;
+  return isStaff(state) ? <StaffGloryView /> : <StudentGloryView />;
+}
+
+function StudentGloryView() {
   const state = useAppState()!;
   const now = useNow();
   const earned = earnedPoints(state);

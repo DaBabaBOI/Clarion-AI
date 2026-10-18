@@ -38,16 +38,12 @@
   --shadow-pop: 0 12px 32px -8px rgb(20 22 43 / 0.18);
 }
 
+/*
+ * The brand gradient is kept for the logo, the splash wordmark and the Road to
+ * Glory progress line. Everything else uses flat colours so it stays calm.
+ */
 @utility bg-brand-gradient {
   background-image: linear-gradient(to right, var(--color-brand), var(--color-sky));
-}
-
-@utility bg-soft-gradient {
-  background-image: linear-gradient(to right, var(--color-brand-soft), var(--color-sky-soft));
-}
-
-@utility bg-calm-gradient {
-  background-image: linear-gradient(to right, var(--color-sky-soft), var(--color-mint-soft));
 }
 
 @utility text-brand-gradient {
