@@ -105,10 +105,10 @@ function StudentDashboard() {
         <div className="flex w-full flex-col gap-5 lg:w-[372px] lg:shrink-0">
           <WeekCard now={now} dueOn={dueOn} />
 
-          <section className="rounded-card border border-line bg-white px-5 py-[18px]">
+          <section className="rounded-card bg-brand-soft px-5 py-[18px]">
             <div className="flex items-center gap-2">
               <LogoMark size={20} />
-              <h2 className="text-[13px] font-bold text-ink">Clarion suggests</h2>
+              <h2 className="text-[13px] font-bold text-brand">Clarion suggests</h2>
             </div>
             <p className="mt-3 text-[13.5px] leading-5 text-ink">
               {tip

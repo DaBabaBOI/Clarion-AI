@@ -9,42 +9,36 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --color-ink: #14162b;
-  --color-ink-hover: #2c3048;
   --color-muted: #6b7089;
   --color-faint: #a3a7ba;
   --color-line: #e6e9f1;
   --color-canvas: #f7f8fc;
 
-  /* A calm indigo, used sparingly: links, ticks and progress. Main buttons are ink. */
-  --color-brand: #4a52c9;
-  --color-brand-soft: #eef0f8;
-  --color-brand-deep: #3d44ad;
+  --color-brand: #6d5dfb;
+  --color-brand-soft: #efedff;
+  --color-brand-deep: #5c4af2;
   --color-sky: #3b82f6;
   --color-sky-soft: #e8f1ff;
   --color-mint: #12b76a;
   --color-mint-soft: #e5f8ee;
   --color-amber: #ef8b09;
   --color-amber-soft: #fff3e3;
-  /* Class colour only (the "brand" class colour), muted so it stays apart from sky. */
-  --color-violet: #7a62d6;
 
   /*
    * Tags (chips) use deeper tints and darker text than the soft surfaces
    * above, so they read clearly: every pair is at least 4.5:1.
    */
-  --color-brand-tag: #e3e6f6;
-  --color-brand-tag-ink: #3b45a8;
+  --color-brand-tag: #e2defd;
+  --color-brand-tag-ink: #4a3ad4;
   --color-sky-tag: #d8e6fc;
   --color-sky-tag-ink: #1d5bc7;
   --color-mint-tag: #d0eedd;
   --color-mint-tag-ink: #05703f;
   --color-amber-tag: #fde0bd;
   --color-amber-tag-ink: #9a4d00;
-  --color-violet-tag: #ebe5f8;
-  --color-violet-tag-ink: #5b3fb3;
   --color-neutral-tag: #eceef4;
   --color-neutral-tag-ink: #565b73;
-  --color-brand-solid: #3b45a8;
+  --color-brand-solid: #5040e0;
   --color-mint-solid: #08804a;
   --color-amber-solid: #b85d00;
 
