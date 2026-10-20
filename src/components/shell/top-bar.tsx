@@ -187,7 +187,7 @@ function AccountMenu({ state }: { state: AppState | null }) {
         onClick={() => setOpen((v) => !v)}
         className="grid size-8 place-items-center rounded-full"
       >
-        {state ? <Avatar name={state.student.fullName} me /> : <span className="size-8 rounded-full bg-brand-soft" />}
+        {state ? <Avatar name={state.student.fullName} me /> : <span className="size-8 rounded-full bg-neutral-tag" />}
       </button>
       {open && state && (
         <div role="menu" className="absolute top-[calc(100%+8px)] right-0 z-40 w-[280px] max-w-[calc(100vw-32px)] rounded-[14px] border border-line bg-white p-1.5 shadow-pop">

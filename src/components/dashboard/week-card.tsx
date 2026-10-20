@@ -42,9 +42,9 @@ export function WeekCard({ now, dueOn }: { now: Date; dueOn: (day: string) => Ta
               aria-label={`${WEEKDAYS[date.getDay()]} ${date.getDate()}${due.length ? `, ${due.length} due` : ""}`}
               className={cx(
                 "flex flex-col items-center gap-1.5 rounded-[11px] py-[9px] transition",
-                isToday ? "bg-brand text-white" : "hover:bg-canvas",
+                isToday ? "bg-ink text-white" : "hover:bg-canvas",
                 selected && !isToday && "bg-canvas ring-1 ring-line",
-                selected && isToday && "ring-2 ring-brand/30 ring-offset-1",
+                selected && isToday && "ring-2 ring-ink/25 ring-offset-1",
               )}
             >
               <span className={cx("text-[11px] font-semibold", isToday ? "text-white" : "text-faint")}>{WEEKDAYS[date.getDay()][0]}</span>

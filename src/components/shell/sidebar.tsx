@@ -24,10 +24,10 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             aria-current={active ? "page" : undefined}
             className={cx(
               "flex items-center gap-[11px] rounded-control px-3 py-2.5 text-[13.5px] font-semibold transition-colors",
-              active ? "bg-brand-soft text-brand" : "text-muted hover:bg-canvas hover:text-ink",
+              active ? "bg-neutral-tag text-ink" : "text-muted hover:bg-canvas hover:text-ink",
             )}
           >
-            <Icon className={active ? "text-brand" : "text-faint"} />
+            <Icon className={active ? "text-ink" : "text-faint"} />
             <span className="flex-1">{label}</span>
             {href === "/discussions" && unread > 0 && (
               <span
@@ -49,7 +49,7 @@ export function SidebarProfile() {
   const name = state?.student.shortName ?? "";
   return (
     <div className="flex items-center gap-2.5 py-2 pl-1.5">
-      {state ? <Avatar name={state.student.fullName} size={30} /> : <span className="size-[30px] rounded-full bg-brand-soft" />}
+      {state ? <Avatar name={state.student.fullName} size={30} /> : <span className="size-[30px] rounded-full bg-neutral-tag" />}
       <div className="min-w-0 leading-tight">
         <p className="truncate text-[12.5px] font-semibold text-ink">{name || " "}</p>
         <p className="text-[11px] text-faint">{state?.student.yearGroup ?? " "}</p>

@@ -11,7 +11,7 @@ import { LogoMark } from "../icons";
 import { AddTaskModal } from "../tasks/add-task-modal";
 import { ReviewRow } from "../tasks/review-list";
 import { TaskRow } from "../tasks/task-row";
-import { Avatar, Button, ButtonLink, Card, CardHeader, Chip, EmptyState, PageHeader, TextButton } from "../ui";
+import { Avatar, Button, ButtonLink, Card, CardHeader, Chip, EmptyState, PageHeader, Segmented, TextButton } from "../ui";
 import { SchoolOverview, schoolTotals } from "./school-overview";
 import { StatCard } from "./stat-card";
 import { WeekCard } from "./week-card";
@@ -19,7 +19,7 @@ import { WeekCard } from "./week-card";
 /**
  * The dashboard for teachers and coordinators. Same layout as the student
  * one: what needs doing first (work to check), the work they set, and the
- * week, with the coordinator's school overview on top.
+ * week, with the coordinator's school overview at the top of the main column.
  */
 export function StaffDashboard() {
   const state = useAppState()!;
@@ -28,6 +28,7 @@ export function StaffDashboard() {
   const [adding, setAdding] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showAllWork, setShowAllWork] = useState(false);
+  const [panel, setPanel] = useState<"check" | "work">("check");
 
   const coordinator = state.role === "admin" && state.schoolOverview !== null;
   const stats = staffStats(state, now);
@@ -44,6 +45,47 @@ export function StaffDashboard() {
   const unread = unreadPosts(state);
   const dueOn = (day: string) => state.tasks.filter((t) => teaches(state, t.classId) && t.due === day);
   const totals = coordinator ? schoolTotals(state.schoolOverview!) : null;
+
+  const reviewsToggle = reviews.length > 3 && (
+    <TextButton onClick={() => setShowAllReviews((v) => !v)}>{showAllReviews ? "Show less" : `View all ${reviews.length}`}</TextButton>
+  );
+  const reviewsBody =
+    reviews.length === 0 ? (
+      <div className="mt-4">
+        <EmptyState title="All caught up" body="Handed-in work appears here. Verifying it is what pays students their points." />
+      </div>
+    ) : (
+      <ul>
+        {(showAllReviews ? reviews : reviews.slice(0, 3)).map((r) => (
+          <ReviewRow key={r.submission.id} review={r} now={now} />
+        ))}
+      </ul>
+    );
+  const workToggle = work.length > 4 && (
+    <TextButton onClick={() => setShowAllWork((v) => !v)}>{showAllWork ? "Show less" : `View all ${work.length}`}</TextButton>
+  );
+  const workBody =
+    work.length === 0 ? (
+      <div className="mt-4">
+        <EmptyState
+          title="No work set"
+          body={teachingClasses.length ? "Set work for a class and it shows up here with who has handed it in." : "You are not teaching a class yet."}
+          action={
+            teachingClasses.length > 0 && (
+              <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
+                Set work
+              </Button>
+            )
+          }
+        />
+      </div>
+    ) : (
+      <ul>
+        {(showAllWork ? work : work.slice(0, 4)).map((t) => (
+          <TaskRow key={t.id} task={t} cls={classById(state, t.classId)} today={today} teaching />
+        ))}
+      </ul>
+    );
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -69,71 +111,61 @@ export function StaffDashboard() {
         </div>
       )}
 
-      {coordinator && <SchoolOverview rows={state.schoolOverview!} now={now} />}
-
       <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <Card>
-            <CardHeader title="To check">
-              <Chip tone={reviews.length ? "pending" : "neutral"}>{reviews.length}</Chip>
-              <span className="flex-1" />
-              {reviews.length > 3 && (
-                <TextButton onClick={() => setShowAllReviews((v) => !v)}>{showAllReviews ? "Show less" : `View all ${reviews.length}`}</TextButton>
-              )}
-            </CardHeader>
-            <div className="mt-3 h-px bg-line" />
-            {reviews.length === 0 ? (
-              <div className="mt-4">
-                <EmptyState title="All caught up" body="Handed-in work appears here. Verifying it is what pays students their points." />
-              </div>
-            ) : (
-              <ul>
-                {(showAllReviews ? reviews : reviews.slice(0, 3)).map((r) => (
-                  <ReviewRow key={r.submission.id} review={r} now={now} />
-                ))}
-              </ul>
-            )}
-          </Card>
+          {coordinator && <SchoolOverview rows={state.schoolOverview!} now={now} />}
 
-          <Card>
-            <CardHeader title="Work you set">
-              <span className="flex-1" />
-              {work.length > 4 && (
-                <TextButton onClick={() => setShowAllWork((v) => !v)}>{showAllWork ? "Show less" : `View all ${work.length}`}</TextButton>
-              )}
-            </CardHeader>
-            <div className="mt-3 h-px bg-line" />
-            {work.length === 0 ? (
-              <div className="mt-4">
-                <EmptyState
-                  title="No work set"
-                  body={teachingClasses.length ? "Set work for a class and it shows up here with who has handed it in." : "You are not teaching a class yet."}
-                  action={
-                    teachingClasses.length > 0 && (
-                      <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
-                        Set work
-                      </Button>
-                    )
-                  }
+          {coordinator ? (
+            // Coordinators have the school overview above, so their own
+            // classes share one card: what to check, or the work they set.
+            <Card>
+              <CardHeader title="Your classes">
+                <span className="flex-1" />
+                {panel === "check" ? reviewsToggle : workToggle}
+                <Segmented
+                  label="Show"
+                  options={[
+                    { value: "check", label: `To check · ${reviews.length}` },
+                    { value: "work", label: "Work you set" },
+                  ]}
+                  value={panel}
+                  onChange={setPanel}
                 />
-              </div>
-            ) : (
-              <ul>
-                {(showAllWork ? work : work.slice(0, 4)).map((t) => (
-                  <TaskRow key={t.id} task={t} cls={classById(state, t.classId)} today={today} teaching />
-                ))}
-              </ul>
-            )}
-          </Card>
+              </CardHeader>
+              <div className="mt-3 h-px bg-line" />
+              {panel === "check" ? reviewsBody : workBody}
+            </Card>
+          ) : (
+            <>
+              <Card>
+                <CardHeader title="To check">
+                  <Chip tone={reviews.length ? "pending" : "neutral"}>{reviews.length}</Chip>
+                  <span className="flex-1" />
+                  {reviewsToggle}
+                </CardHeader>
+                <div className="mt-3 h-px bg-line" />
+                {reviewsBody}
+              </Card>
+
+              <Card>
+                <CardHeader title="Work you set">
+                  <span className="flex-1" />
+                  {workToggle}
+                </CardHeader>
+                <div className="mt-3 h-px bg-line" />
+                {workBody}
+              </Card>
+            </>
+          )}
         </div>
 
         <div className="flex w-full flex-col gap-4 lg:w-[372px] lg:shrink-0">
           <WeekCard now={now} dueOn={dueOn} />
 
-          <section className="rounded-card bg-brand-soft px-5 py-[18px]">
+          <section className="rounded-card border border-line bg-white px-5 py-[18px]">
             <div className="flex items-center gap-2">
               <LogoMark size={20} />
-              <h2 className="text-[13px] font-bold text-brand">Clarion suggests</h2>
+              <h2 className="text-[13px] font-bold text-ink">Clarion suggests</h2>
             </div>
             <p className="mt-3 text-[13.5px] leading-5 text-ink">{staffSuggestion(state, now)}</p>
             <ButtonLink href="/ai" variant="secondary" size="sm" className="mt-3" onClick={() => actions.setAiContext(null)}>

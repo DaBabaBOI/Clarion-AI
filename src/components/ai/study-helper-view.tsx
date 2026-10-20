@@ -277,7 +277,7 @@ export function StudyHelperView() {
             <button
               type="submit"
               disabled={!draft.trim() || thinking}
-              className="rounded-full bg-brand px-[22px] py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-brand-deep disabled:opacity-50"
+              className="rounded-full bg-ink px-[22px] py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-ink-hover disabled:opacity-50"
             >
               {thinking ? "Thinking…" : "Send"}
             </button>

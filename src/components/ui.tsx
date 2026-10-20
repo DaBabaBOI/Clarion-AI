@@ -58,6 +58,7 @@ export function Divider({ className }: { className?: string }) {
 // ── Chips ───────────────────────────────────────────────────────────────────
 
 export type ChipTone =
+  | "violet"
   | "amber"
   | "sky"
   | "mint"
@@ -70,13 +71,14 @@ export type ChipTone =
   | "pending";
 
 const CHIP_TONES: Record<ChipTone, string> = {
+  violet: "bg-violet-tag text-violet-tag-ink",
   amber: "bg-amber-tag text-amber-tag-ink",
   sky: "bg-sky-tag text-sky-tag-ink",
   mint: "bg-mint-tag text-mint-tag-ink",
   brand: "bg-brand-tag text-brand-tag-ink",
   neutral: "bg-neutral-tag text-neutral-tag-ink",
   white: "bg-white text-neutral-tag-ink",
-  teacher: "bg-brand-solid text-white",
+  teacher: "bg-neutral-tag text-ink",
   "solid-mint": "bg-mint-solid text-white",
   "solid-amber": "bg-amber-solid text-white",
   pending: "border border-dashed border-neutral-tag-ink/50 bg-white text-neutral-tag-ink",
@@ -107,19 +109,19 @@ export function Chip({
   );
 }
 
-export const CLASS_TONE: Record<ClassColor, ChipTone> = { mint: "mint", sky: "sky", brand: "brand", amber: "amber" };
+export const CLASS_TONE: Record<ClassColor, ChipTone> = { mint: "mint", sky: "sky", brand: "violet", amber: "amber" };
 
 export const CLASS_SWATCH: Record<ClassColor, string> = {
   mint: "bg-mint",
   sky: "bg-sky",
-  brand: "bg-brand",
+  brand: "bg-violet",
   amber: "bg-amber",
 };
 
 export const CLASS_TEXT: Record<ClassColor, string> = {
   mint: "text-mint-tag-ink",
   sky: "text-sky-tag-ink",
-  brand: "text-brand-tag-ink",
+  brand: "text-violet-tag-ink",
   amber: "text-amber-tag-ink",
 };
 
@@ -147,7 +149,7 @@ export function ClassChipLink({ cls }: { cls: SchoolClass | null }) {
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-deep",
+  primary: "bg-ink text-white hover:bg-ink-hover",
   secondary: "border border-line bg-white text-ink hover:bg-canvas",
   ghost: "text-brand hover:bg-brand-soft",
 };
@@ -284,7 +286,7 @@ export function Avatar({ name, size = 32, me = false }: { name: string; size?: n
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
       className={cx(
         "grid shrink-0 place-items-center rounded-full font-semibold",
-        me ? "bg-brand text-white" : "bg-brand-soft text-brand",
+        me ? "bg-ink text-white" : "bg-neutral-tag text-neutral-tag-ink",
       )}
     >
       {initials}

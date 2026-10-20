@@ -9,36 +9,42 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --color-ink: #14162b;
+  --color-ink-hover: #2c3048;
   --color-muted: #6b7089;
   --color-faint: #a3a7ba;
   --color-line: #e6e9f1;
   --color-canvas: #f7f8fc;
 
-  --color-brand: #6d5dfb;
-  --color-brand-soft: #efedff;
-  --color-brand-deep: #5c4af2;
+  /* A calm indigo, used sparingly: links, ticks and progress. Main buttons are ink. */
+  --color-brand: #4a52c9;
+  --color-brand-soft: #eef0f8;
+  --color-brand-deep: #3d44ad;
   --color-sky: #3b82f6;
   --color-sky-soft: #e8f1ff;
   --color-mint: #12b76a;
   --color-mint-soft: #e5f8ee;
   --color-amber: #ef8b09;
   --color-amber-soft: #fff3e3;
+  /* Class colour only (the "brand" class colour), muted so it stays apart from sky. */
+  --color-violet: #7a62d6;
 
   /*
    * Tags (chips) use deeper tints and darker text than the soft surfaces
    * above, so they read clearly: every pair is at least 4.5:1.
    */
-  --color-brand-tag: #e2defd;
-  --color-brand-tag-ink: #4a3ad4;
+  --color-brand-tag: #e3e6f6;
+  --color-brand-tag-ink: #3b45a8;
   --color-sky-tag: #d8e6fc;
   --color-sky-tag-ink: #1d5bc7;
   --color-mint-tag: #d0eedd;
   --color-mint-tag-ink: #05703f;
   --color-amber-tag: #fde0bd;
   --color-amber-tag-ink: #9a4d00;
+  --color-violet-tag: #ebe5f8;
+  --color-violet-tag-ink: #5b3fb3;
   --color-neutral-tag: #eceef4;
   --color-neutral-tag-ink: #565b73;
-  --color-brand-solid: #5040e0;
+  --color-brand-solid: #3b45a8;
   --color-mint-solid: #08804a;
   --color-amber-solid: #b85d00;
 
@@ -71,10 +77,11 @@
 }
 
 /*
- * On laptops and desktops the whole app is drawn at 90%, like browser zoom,
- * so the dashboard fits on one screen. Phones stay at 100% so text stays
- * readable. Heights tied to the screen use --screen, which undoes the scale
- * so the sidebar and pages still reach the bottom edge.
+ * On laptops and desktops the whole app is drawn at 80%, like browser zoom,
+ * so every dashboard fits on one screen; shorter laptop screens (1366×768,
+ * 1280×720) go a little smaller so they fit too. Phones stay at 100% so text
+ * stays readable. Heights tied to the screen use --screen, which undoes the
+ * scale so the sidebar and pages still reach the bottom edge.
  */
 :root {
   --ui-scale: 1;
@@ -83,11 +90,23 @@
 
 @media (min-width: 1024px) {
   :root {
-    --ui-scale: 0.9;
+    --ui-scale: 0.8;
   }
 
   html {
     zoom: var(--ui-scale);
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 799px) {
+  :root {
+    --ui-scale: 0.76;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 739px) {
+  :root {
+    --ui-scale: 0.72;
   }
 }
 

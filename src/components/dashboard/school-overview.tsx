@@ -42,6 +42,7 @@ export function SchoolOverview({ rows, now }: { rows: ClassOverview[]; now: Date
       <CardHeader title="School overview">
         {flagged > 0 && <Chip tone="solid-amber">{flagged} need attention</Chip>}
         <span className="flex-1" />
+        <span className="text-[11.5px] text-faint">Counts only, no student names</span>
         {rows.length > preview && (
           <TextButton onClick={() => setShowAll((v) => !v)}>{showAll ? "Show less" : `View all ${rows.length} classes`}</TextButton>
         )}
@@ -60,7 +61,7 @@ export function SchoolOverview({ rows, now }: { rows: ClassOverview[]; now: Date
                 Due this week
               </th>
               <th scope="col" className="px-3 py-2.5 text-right font-semibold">
-                To check
+                To check · oldest
               </th>
               <th scope="col" className="px-3 py-2.5 text-right font-semibold">
                 Missing
@@ -81,28 +82,28 @@ export function SchoolOverview({ rows, now }: { rows: ClassOverview[]; now: Date
               return (
                 <tr key={r.classId} className="border-b border-line last:border-b-0">
                   <td className="py-2.5 pr-3 pl-5">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 whitespace-nowrap">
                       <span className={cx("size-3 shrink-0 rounded-[4px]", CLASS_SWATCH[r.color])} aria-hidden="true" />
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {r.member ? (
-                            <Link href={classHref(r.classId)} className="hover:text-brand hover:underline underline-offset-2">
-                              {name}
-                            </Link>
-                          ) : (
-                            name
-                          )}
-                          {needsAttention(r, today) && <Chip tone="amber">Needs attention</Chip>}
-                        </div>
-                        <p className="truncate text-[11.5px] text-faint">{r.teachers || "No teacher yet"}</p>
-                      </div>
+                      {r.member ? (
+                        <Link href={classHref(r.classId)} className="hover:text-brand hover:underline underline-offset-2">
+                          {name}
+                        </Link>
+                      ) : (
+                        name
+                      )}
+                      <span className="truncate text-[12px] text-faint">{r.teachers || "No teacher yet"}</span>
+                      {needsAttention(r, today) && (
+                        <Chip tone="amber" size="sm">
+                          Needs attention
+                        </Chip>
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{r.students}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{r.dueThisWeek}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
                     <span className={r.waiting ? "font-semibold text-ink" : "text-faint"}>{r.waiting}</span>
-                    {days >= 1 && <span className={cx("block text-[11px]", days >= 3 ? "text-amber" : "text-faint")}>oldest {days}d</span>}
+                    {days >= 1 && <span className={cx("ml-1.5 text-[11px]", days >= 3 ? "font-semibold text-amber" : "text-faint")}>{days}d</span>}
                   </td>
                   <td className={cx("px-3 py-2.5 text-right tabular-nums", r.missing ? "font-semibold text-amber" : "text-faint")}>{r.missing}</td>
                   <td className="py-2.5 pr-5 pl-3 text-right tabular-nums text-mint">{r.verifiedThisWeek}</td>
@@ -112,7 +113,6 @@ export function SchoolOverview({ rows, now }: { rows: ClassOverview[]; now: Date
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-[11.5px] text-faint">Counts only. Student names stay with their teachers.</p>
     </Card>
   );
 }
