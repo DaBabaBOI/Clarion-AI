@@ -12,6 +12,7 @@
 -- the first line (it is never stored in this file):
 --   select set_config('clarion.seed_password', '<password>', false);
 -- Running it again does nothing once the school exists.
+-- clarion_international_clear.sql empties it back to a blank sheet.
 
 create or replace function pg_temp.school_day(base date, n int)
 returns date

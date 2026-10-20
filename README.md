@@ -55,7 +55,9 @@ A full school to use Clarion with, made by `supabase/seed/clarion_international.
 | `prithu1606+<first name>@gmail.com` | 12 Year 9 students (Ananya, Rohan, Zara, Aarav, Meera, Kabir, Ishaan, Diya, Vihaan, Saanvi, Arjun, Tara) | All four Year 9 classes |
 | `prithu1606+<first name>@gmail.com` | 12 Year 10 students (Aditya, Riya, Sameer, Anika, Neel, Pooja, Yash, Ira, Karan, Leela, Om, Myra) | All four Year 10 classes |
 
-It comes with 34 pieces of work (instructions and resource links), about 200 hand-ins (most older work verified, recent work waiting to be checked, a few returned), points, class discussions with unanswered student questions, flashcard decks and two reward requests. Class codes: `BIO9KX`, `MAT9QT`, `ENG9LP`, `HIS9VD`, `BIO10Z`, `MAT10W`, `ENG10R`, `HIS10S`.
+It is a blank sheet: every class has its teacher and students and three rewards are on offer, but there is no work, hand-ins, points, discussions or flashcards yet. Class codes: `BIO9KX`, `MAT9QT`, `ENG9LP`, `HIS9VD`, `BIO10Z`, `MAT10W`, `ENG10R`, `HIS10S`.
+
+The seed file also fills the school with sample activity (34 pieces of work, about 200 hand-ins, points, discussions and flashcards). `supabase/seed/clarion_international_clear.sql` empties it back to a blank sheet, keeping the accounts, classes and rewards.
 
 Google sign-in appears on the sign-in screen automatically once the Google provider is switched on in Supabase (Authentication → Providers → Google, redirect `https://miulgjlrdxzveufoxkmj.supabase.co/auth/v1/callback`), as long as the site's address is in the Redirect URLs (see above; add `http://localhost:3000/**` too for local development).
 
