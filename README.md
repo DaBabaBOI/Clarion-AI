@@ -52,7 +52,7 @@ A full school to use Clarion with, made by `supabase/seed/clarion_international.
 | `prithu1606+khan@gmail.com` | Teacher: Farah Khan | Maths 10 |
 | `prithu1606+mathew@gmail.com` | Teacher: Daniel Mathew | English 10 |
 | `prithu1606+banerjee@gmail.com` | Teacher: Sourav Banerjee | History 9, History 10 |
-| `prithu1606+<first name>@gmail.com` | 12 Year 9 students (Ananya, Rohan, Zara, Aarav, Meera, Kabir, Ishaan, Diya, Vihaan, Saanvi, Arjun, Tara) | All four Year 9 classes |
+| `prithu1606+<first name>@gmail.com` | 13 Year 9 students (Prithu, Ananya, Rohan, Zara, Aarav, Meera, Kabir, Ishaan, Diya, Vihaan, Saanvi, Arjun, Tara) | All four Year 9 classes |
 | `prithu1606+<first name>@gmail.com` | 12 Year 10 students (Aditya, Riya, Sameer, Anika, Neel, Pooja, Yash, Ira, Karan, Leela, Om, Myra) | All four Year 10 classes |
 
 `clarion_international_fresh.sql` sets it up like the first days of a fresh start: two or three pieces of work per class (17 in all, with resource links), about 85 hand-ins (most of yesterday's work verified, some still to check), the points from that, one discussion and one flashcard deck per class, and three rewards on offer. Class codes: `BIO9KX`, `MAT9QT`, `ENG9LP`, `HIS9VD`, `BIO10Z`, `MAT10W`, `ENG10R`, `HIS10S`.

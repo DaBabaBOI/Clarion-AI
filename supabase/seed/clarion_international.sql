@@ -2,7 +2,7 @@
 --
 --   1 coordinator   prithu1606+coordinator@gmail.com   (Nandini Rao, teaches English 9)
 --   5 teachers      prithu1606+kaushal / +iyer / +khan / +mathew / +banerjee @gmail.com
---   24 students     prithu1606+<first name>@gmail.com  (12 in Year 9, 12 in Year 10)
+--   25 students     prithu1606+<first name>@gmail.com  (13 in Year 9, 12 in Year 10)
 --   8 classes       Biology, Maths, English and History for Years 9 and 10
 --
 -- Every address is a Gmail "+" alias, so password resets reach the owner's inbox.
@@ -53,7 +53,7 @@ insert into seed_people values
 insert into seed_people
 select 'prithu1606+' || lower(split_part(name, ' ', 1)) || '@gmail.com', name, 'student', year_group
 from (values
-  ('Ananya Reddy', 'Year 9'), ('Rohan Mehta', 'Year 9'), ('Zara Khan', 'Year 9'), ('Aarav Patel', 'Year 9'),
+  ('Prithu Sharma', 'Year 9'), ('Ananya Reddy', 'Year 9'), ('Rohan Mehta', 'Year 9'), ('Zara Khan', 'Year 9'), ('Aarav Patel', 'Year 9'),
   ('Meera Joshi', 'Year 9'), ('Kabir Singh', 'Year 9'), ('Ishaan Thakur', 'Year 9'), ('Diya Nair', 'Year 9'),
   ('Vihaan Gupta', 'Year 9'), ('Saanvi Bose', 'Year 9'), ('Arjun Desai', 'Year 9'), ('Tara Lobo', 'Year 9'),
   ('Aditya Kumar', 'Year 10'), ('Riya Pillai', 'Year 10'), ('Sameer Jain', 'Year 10'), ('Anika Das', 'Year 10'),

@@ -1,6 +1,6 @@
 -- Clear Clarion International School back to a blank sheet.
 --
--- Keeps the school, all 30 accounts, the 8 classes (with their join codes,
+-- Keeps the school, all 31 accounts, the 8 classes (with their join codes,
 -- teachers and students) and the rewards on offer. Removes everything that
 -- has happened since: work, hand-ins and attachments, points, reward
 -- requests, discussions, flashcards and AI Helper chats.
