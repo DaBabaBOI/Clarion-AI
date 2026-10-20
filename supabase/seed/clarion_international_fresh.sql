@@ -12,6 +12,8 @@
 --   8 flashcard decks   one shared deck per class
 --
 -- The accounts, classes and rewards are left as they are.
+-- Its scratch tables are temporary and have row level security on too, so
+-- the SQL editor runs it without a warning.
 
 create or replace function pg_temp.school_day(base date, n int)
 returns date
@@ -42,6 +44,7 @@ as $f$ select ((hashtext(key)::bigint & 2147483647) % 1000) / 1000.0 $f$;
 
 -- set_day and due_day are school days from today (negative is the past, 0 is today).
 create temp table fresh_tasks (class_name text, title text, set_day int, due_day int, points int, details text, link_title text, link_url text);
+alter table fresh_tasks enable row level security;
 insert into fresh_tasks values
   ('Biology 9', 'Cell structure worksheet', -4, -1, 20,
    E'Label the animal and plant cell diagrams on the worksheet, then answer questions 1 to 8.\nUse full sentences for questions 6 to 8.\nHand in a photo or scan of both pages.',
@@ -102,6 +105,7 @@ insert into fresh_tasks values
 -- ── Discussions and flashcards ──────────────────────────────────────────────
 
 create temp table fresh_threads (key text primary key, class_name text, author text, title text, pinned boolean);
+alter table fresh_threads enable row level security;
 insert into fresh_threads values
   ('bio9', 'Biology 9', 'prithu1606+kaushal@gmail.com', 'Q and A, Biology 9', true),
   ('maths9', 'Maths 9', 'prithu1606+aarav@gmail.com', 'Quadratics help', false),
@@ -113,6 +117,7 @@ insert into fresh_threads values
   ('his10', 'History 10', 'prithu1606+sameer@gmail.com', 'Cold War revision', false);
 
 create temp table fresh_posts (thread_key text, author text, body text, minutes_ago int);
+alter table fresh_posts enable row level security;
 insert into fresh_posts values
   ('bio9', 'prithu1606+kaushal@gmail.com', 'Welcome back! Post questions about this unit here. Next week''s test covers cell structure and photosynthesis.', 2900),
   ('bio9', 'prithu1606+ananya@gmail.com', 'Do we need to memorise the full equation, or is the word equation enough?', 300),
@@ -131,6 +136,7 @@ insert into fresh_posts values
   ('his10', 'prithu1606+banerjee@gmail.com', 'Yes, there is one source question on it.', 380);
 
 create temp table fresh_cards (class_name text, deck text, front text, back text, position int);
+alter table fresh_cards enable row level security;
 insert into fresh_cards values
   ('Biology 9', 'Cell structure', 'What does the nucleus do?', 'It holds the genetic material and controls the cell''s activities.', 1),
   ('Biology 9', 'Cell structure', 'Where does aerobic respiration happen?', 'In the mitochondria.', 2),
@@ -170,8 +176,10 @@ begin
   -- Clear what has happened so far (see clarion_international_clear.sql).
   create temp table school_people on commit drop as
     select id from public.profiles where school_id = school;
+  alter table school_people enable row level security;
   create temp table school_classes on commit drop as
     select id from public.classes where school_id = school;
+  alter table school_classes enable row level security;
   delete from public.tasks
   where class_id in (select id from school_classes) or owner_id in (select id from school_people);
   delete from public.points_ledger where student_id in (select id from school_people);
@@ -189,12 +197,15 @@ begin
     join public.class_members m on m.class_id = c.id and m.role = 'teacher'
     where c.school_id = school
     order by c.id, m.joined_at;
+  alter table fresh_class_rows enable row level security;
 
   create temp table fresh_people on commit drop as
     select u.id, u.email from auth.users u join public.profiles p on p.id = u.id where p.school_id = school;
+  alter table fresh_people enable row level security;
 
   -- Work, with the teacher's instructions and a resource link where there is one.
   create temp table fresh_task_rows (id uuid, class_id uuid, title text, set_on date, due_on date, points int, created_by uuid) on commit drop;
+  alter table fresh_task_rows enable row level security;
   with added as (
     insert into public.tasks (class_id, title, details, set_on, due_on, points, created_by)
     select c.id, t.title, t.details, pg_temp.school_day(today, t.set_day), pg_temp.school_day(today, t.due_day), t.points, c.teacher
@@ -251,6 +262,7 @@ begin
 
   -- Discussions
   create temp table fresh_thread_rows (id uuid, class_id uuid, title text) on commit drop;
+  alter table fresh_thread_rows enable row level security;
   with added as (
     insert into public.threads (class_id, author_id, title, pinned, created_at, last_post_at)
     select c.id, p.id, t.title, t.pinned,

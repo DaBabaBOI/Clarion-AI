@@ -20,8 +20,10 @@ begin
 
   create temp table school_people on commit drop as
     select id from public.profiles where school_id = school;
+  alter table school_people enable row level security;
   create temp table school_classes on commit drop as
     select id from public.classes where school_id = school;
+  alter table school_classes enable row level security;
 
   -- Work, with its hand-ins and attachments.
   delete from public.tasks
