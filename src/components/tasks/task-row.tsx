@@ -53,8 +53,8 @@ export function TaskRow({
         showSetOn ? "py-[13px]" : "py-3.5",
       )}
     >
-      {teaching ? (
-        <span className="size-5 shrink-0 rounded-[6px] border-[1.5px] border-dashed border-line" title="You set this work" aria-hidden="true" />
+      {progress ? (
+        <HandInRing done={progress.handedIn} total={progress.total} />
       ) : (
         <span className="relative z-10 flex">
           <TaskCheckbox status={task.status} label={task.title} personal={!task.classId} onToggle={() => toggleWithFeedback(task)} />
@@ -83,11 +83,11 @@ export function TaskRow({
         )}
       </div>
       {progress ? (
-        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-          {progress.waiting > 0 && <Chip tone="pending">{progress.waiting} to check</Chip>}
-          <Chip tone="neutral">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-1.5">
+          <span className="text-[11.5px] font-semibold tabular-nums text-muted">
             {progress.handedIn}/{progress.total} in
-          </Chip>
+          </span>
+          {progress.waiting > 0 && <Chip tone="pending">{progress.waiting} to check</Chip>}
           <Chip tone={due.tone}>{due.label}</Chip>
         </div>
       ) : (
@@ -95,5 +95,29 @@ export function TaskRow({
       )}
       <ChevronRightIcon className="hidden shrink-0 text-faint transition group-hover:translate-x-0.5 group-hover:text-brand sm:block" />
     </li>
+  );
+}
+
+/** How much of the class has handed the work in. Green once everyone has. */
+function HandInRing({ done, total }: { done: number; total: number }) {
+  const r = 7.5;
+  const length = 2 * Math.PI * r;
+  const share = total ? Math.min(done / total, 1) : 0;
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" className="shrink-0 -rotate-90" aria-hidden="true">
+      <circle cx="10" cy="10" r={r} fill="none" strokeWidth="2.5" className="stroke-line" />
+      {share > 0 && (
+        <circle
+          cx="10"
+          cy="10"
+          r={r}
+          fill="none"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={`${share * length} ${length}`}
+          className={share === 1 ? "stroke-mint" : "stroke-brand"}
+        />
+      )}
+    </svg>
   );
 }

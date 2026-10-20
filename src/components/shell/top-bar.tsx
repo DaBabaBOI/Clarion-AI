@@ -274,20 +274,22 @@ export function TopBar() {
         <span className="hidden w-2.5 md:block" />
         <SearchBox state={state} className="hidden w-[360px] md:block" />
         <div className="flex-1" />
-        {state && isStaff(state) && (
+        {state && isStaff(state) && toCheck > 0 && (
           <Link href="/dashboard">
-            <Chip tone={toCheck ? "amber" : "neutral"} className="text-[12px]">
+            <Chip tone="amber" className="text-[12px]">
               {toCheck} to check
             </Chip>
           </Link>
         )}
         {state && !isStaff(state) && (
           <div className="flex items-center gap-2">
-            <Link href="/road-to-glory" className="hidden sm:block">
-              <Chip tone="amber" className="text-[12px]">
-                {days} day streak
-              </Chip>
-            </Link>
+            {days > 0 && (
+              <Link href="/road-to-glory" className="hidden sm:block">
+                <Chip tone="amber" className="text-[12px]">
+                  {days} day streak
+                </Chip>
+              </Link>
+            )}
             <Link href="/road-to-glory">
               <Chip tone="brand" className="text-[12px]">
                 {pts} pts

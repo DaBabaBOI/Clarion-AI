@@ -152,9 +152,10 @@ const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   ghost: "text-brand hover:bg-brand-soft",
 };
 
-type ButtonSize = "xs" | "sm" | "md";
+type ButtonSize = "icon" | "xs" | "sm" | "md";
 
 const BUTTON_SIZES: Record<ButtonSize, string> = {
+  icon: "size-8 text-[12px]",
   xs: "px-2.5 py-1.5 text-[12px]",
   sm: "px-4 py-[9px] text-[13px]",
   md: "px-4 py-2.5 text-[13.5px]",
@@ -479,11 +480,12 @@ export function PageSkeleton() {
   );
 }
 
-export function EmptyState({ title, body }: { title: string; body: string }) {
+export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-1 rounded-[12px] bg-canvas px-6 py-8 text-center">
       <p className="text-[13.5px] font-semibold text-ink">{title}</p>
       <p className="max-w-xs text-[12.5px] leading-5 text-muted">{body}</p>
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }

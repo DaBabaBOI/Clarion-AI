@@ -108,6 +108,13 @@ export function StaffDashboard() {
                 <EmptyState
                   title="No work set"
                   body={teachingClasses.length ? "Set work for a class and it shows up here with who has handed it in." : "You are not teaching a class yet."}
+                  action={
+                    teachingClasses.length > 0 && (
+                      <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
+                        Set work
+                      </Button>
+                    )
+                  }
                 />
               </div>
             ) : (

@@ -33,12 +33,9 @@ export function ReviewRow({ review, now, showTask = true }: { review: Review; no
         </div>
         <p className="mt-0.5 text-[11.5px] text-faint">
           {showTask && `${s.studentName} · `}handed in {timeAgo(s.submittedAt, now)} · {task.points} pts
+          {files.length === 0 && " · no files"}
         </p>
-        {files.length > 0 ? (
-          <AttachmentChips items={files} />
-        ) : (
-          <p className="mt-1 text-[11.5px] text-faint">No files attached</p>
-        )}
+        {files.length > 0 && <AttachmentChips items={files} />}
       </div>
       <div className="flex shrink-0 gap-2">
         <Button variant="secondary" size="sm" onClick={() => actions.reviewSubmission(s.id, "returned")}>

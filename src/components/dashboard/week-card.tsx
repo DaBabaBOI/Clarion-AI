@@ -14,16 +14,21 @@ export function WeekCard({ now, dueOn }: { now: Date; dueOn: (day: string) => Ta
   const state = useAppState()!;
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const today = toISODate(now);
+  const days = weekDays(now);
   const dayDetail = selectedDay ? dueOn(selectedDay) : [];
+  // A week that runs into the next month names both.
+  const first = parseISODate(days[0]);
+  const last = parseISODate(days[6]);
+  const month = first.getMonth() === last.getMonth() ? monthName(first) : `${monthName(first)} – ${monthName(last)}`;
 
   return (
     <Card>
       <CardHeader title="This week" small>
         <span className="flex-1" />
-        <span className="text-[12.5px] text-muted">{monthName(now)}</span>
+        <span className="text-[12.5px] text-muted">{month}</span>
       </CardHeader>
       <div className="mt-3.5 grid grid-cols-7 gap-1.5" role="group" aria-label="Days this week">
-        {weekDays(now).map((d) => {
+        {days.map((d) => {
           const isToday = d === today;
           const due = dueOn(d);
           const selected = selectedDay === d;

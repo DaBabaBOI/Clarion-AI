@@ -114,7 +114,7 @@ export function suggestion(state: AppState, today: Date): { task: Task; reason: 
   else if (diff === 1) reason = "it is due tomorrow";
   else reason = "it is your next deadline";
   const where = cls ? ` for ${cls.name}` : "";
-  return { task: first, reason: `Start “${first.title}”${where} first, ${reason}.` };
+  return { task: first, reason: `Start “${first.title}”${where} first: ${reason}.` };
 }
 
 export function threadUpdatedAt(thread: Thread): string {
