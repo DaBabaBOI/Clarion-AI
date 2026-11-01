@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { isStaff } from "@/lib/selectors";
 import { initStore, useAppState, useStoreStatus } from "@/lib/store";
 import { Button, PageSkeleton } from "../ui";
 import { Sidebar } from "./sidebar";
@@ -13,6 +14,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const state = useAppState();
   const { status, error } = useStoreStatus();
   const router = useRouter();
+  const pathname = usePathname();
+  // Road to Glory is a game for students: it takes the whole screen.
+  const gameRoute = pathname.startsWith("/road-to-glory");
+  const gameMode = gameRoute && (state ? !isStaff(state) : status !== "error");
 
   // Load the signed-in user's data (or the demo), and send everyone else to sign in.
   useEffect(() => {
@@ -23,6 +28,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (status === "signed-out") router.replace("/sign-in");
   }, [status, router]);
+
+  if (gameMode) {
+    return (
+      <>
+        {state ? (
+          children
+        ) : (
+          <div className="grid min-h-(--screen) place-items-center bg-game-bg font-mono text-[13px] text-game-muted" role="status">
+            Loading the realm…
+          </div>
+        )}
+        <Toaster />
+      </>
+    );
+  }
 
   return (
     <>

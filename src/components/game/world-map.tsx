@@ -55,7 +55,7 @@ export function WorldMap({
     <GamePanel
       title="The realm"
       right={<span className="text-[13px] text-game-muted">Win battles to earn titles. Each battle costs one quest scroll.</span>}
-      className="min-w-0 flex-1"
+      className="order-1 min-w-0 flex-1 lg:order-none"
     >
       <div className="pixel-inset relative w-full p-1" style={{ aspectRatio: `${MAP_W} / ${MAP_H}` }}>
         <MapCanvas />
@@ -94,8 +94,8 @@ export function WorldMap({
           );
         })}
         <div
-          className="pointer-events-none absolute -translate-y-full motion-safe:animate-[game-bob_0.9s_steps(2)_infinite]"
-          style={{ left: `${(heroAt.x / MAP_W) * 100 + 2.5}%`, top: `${(heroAt.y / MAP_H) * 100}%` }}
+          className="pointer-events-none absolute -translate-y-[85%] motion-safe:animate-[game-bob_0.9s_steps(2)_infinite]"
+          style={{ left: `${(heroAt.x / MAP_W) * 100 + 5.5}%`, top: `${(heroAt.y / MAP_H) * 100}%` }}
         >
           <PixelArt grid={heroHead} scale={1.6} title="You are here" />
         </div>

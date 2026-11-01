@@ -341,7 +341,7 @@ export function Blacksmith({
   const selected = itemByKey(selectedKey) && items.some((i) => i.key === selectedKey) ? itemByKey(selectedKey)! : items[0];
 
   return (
-    <GamePanel title="The Blacksmith" right={<Gold amount={gold} />} className="min-w-0 flex-1">
+    <GamePanel title="The Blacksmith" right={<Gold amount={gold} />} className="order-1 min-w-0 flex-1 lg:order-none">
       <div role="tablist" aria-label="Shop" className="flex flex-wrap gap-1.5">
         {TABS.map((t) => (
           <button

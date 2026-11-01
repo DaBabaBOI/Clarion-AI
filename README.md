@@ -106,7 +106,8 @@ Teachers attach files (PDF, images, documents, slides, spreadsheets, audio or vi
 
 ### Road to Glory: the RPG
 
-A medieval, pixel-art role-playing game in the style of classic Zelda, driven entirely by homework:
+A medieval, pixel-art role-playing game in the style of classic Zelda, driven entirely by homework. For students it opens as its own full-screen game: the Clarion sidebar and top bar step aside, a title screen plays, and a HUD (gold, quest scrolls, how to play, sound, **Exit to Clarion**) sits over three screens picked from a game menu: the Realm, the Blacksmith and the Hall of Heroes (on phones the menu runs along the bottom). Teachers and coordinators keep a normal page about their classes.
+
 
 1. **Hand in homework on time.** Verified work pays its points, which are your **gold**; every point ever earned is **XP**, which sets your level (level 2 at 25 XP, then 25 × (level − 1)²). Each piece handed in by its due date also gives a **quest scroll**. Late work earns half points.
 2. **Gear up at the Blacksmith.** 33 items across weapons, armour, shields, helms and trinkets, with D&D-style stat blocks: damage dice and type, properties (Finesse, Light, Heavy, Two-handed, Versatile), Armour Class, and buffs and debuffs (the Shortsword is nimble but short, the Longsword versatile but slow, the Darksword drains life but curses your AC). Better gear unlocks with levels. Buying shows a "You got the …!" moment, and the hero sprite wears what you equip.

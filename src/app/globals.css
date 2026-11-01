@@ -117,6 +117,13 @@
   }
 }
 
+/* Road to Glory takes the whole screen and draws at full size where it fits. */
+@media (min-width: 1024px) and (min-height: 820px) {
+  html.game-mode {
+    --ui-scale: 1;
+  }
+}
+
 @media (min-width: 1024px) and (max-height: 799px) {
   :root {
     --ui-scale: 0.76;
@@ -262,6 +269,12 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes game-load {
+  to {
+    width: 100%;
   }
 }
 

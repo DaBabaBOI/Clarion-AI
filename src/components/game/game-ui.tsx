@@ -113,7 +113,7 @@ export function GameIcon({ kind, scale = 2, title }: { kind: keyof typeof ICONS;
 /** "120 G" with a coin. */
 export function Gold({ amount, className }: { amount: number; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-1.5 font-pixel text-[10px] text-game-gold", className)}>
+    <span className={cx("inline-flex items-center gap-1.5 font-pixel text-[10px] text-game-gold", className)} aria-label={`${amount} gold`} role="img">
       <GameIcon kind="coin" />
       {amount}
     </span>
