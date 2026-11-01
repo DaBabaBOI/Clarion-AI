@@ -182,6 +182,31 @@ export interface ChatMessage {
   sources?: Source[];
   pending?: boolean;
   error?: boolean;
+  /** The asker's rating of an answer: helpful (1) or not (-1). */
+  rating?: 1 | -1;
+  /** Why it was not helpful, if they said. */
+  ratingComment?: string;
+}
+
+/** Road to Glory: what the hero owns, wears and has fought. */
+export interface HeroState {
+  /** Item keys bought (starter items are always owned). */
+  owned: string[];
+  /** Item key per slot; an empty slot falls back to the starter item. */
+  equipped: Partial<Record<"weapon" | "offhand" | "head" | "body" | "trinket", string>>;
+  battles: { id: string; monster: string; won: boolean; at: string }[];
+}
+
+/** Staff: an answer a student rated, from a chat about a class they teach. */
+export interface AnswerFeedback {
+  id: string;
+  rating: 1 | -1;
+  comment: string | null;
+  studentName: string;
+  classId: string | null;
+  question: string | null;
+  answer: string;
+  at: string;
 }
 
 /** A student's reward request waiting for a member of staff. */
@@ -244,4 +269,9 @@ export interface AppState {
   classBoards: Record<string, LeaderboardEntry[]>;
   schoolOverview: ClassOverview[] | null;
   conversationId: string | null;
+  hero: HeroState;
+  /** Notes teachers write for Clarion, by class id. The AI follows them. */
+  classNotes: Record<string, string>;
+  /** Staff only: ratings students gave answers in chats about their classes. */
+  answerFeedback: AnswerFeedback[];
 }

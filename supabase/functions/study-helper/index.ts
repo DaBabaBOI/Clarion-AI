@@ -7,6 +7,9 @@
 //   model sees), so a student can never read another student's work and a
 //   teacher only sees their own classes.
 // - Every exchange is stored in ai_messages; class teachers can review chats.
+// - Feedback loop: teachers' "Notes for Clarion" (class_ai_notes) join the
+//   context, and the asker's recent 👍/👎 ratings (ai_feedback) tell the model
+//   what to keep doing and what to avoid.
 // - The assistant reply is written with the secret key, so students cannot
 //   fabricate answers or sources.
 // - Needs the GEMINI_API_KEY secret. GEMINI_MODEL optionally pins a model.
@@ -50,6 +53,8 @@ How to answer:
 - Keep answers short and clear: at most about 150 words, plain sentences, no markdown headings.
 - Be encouraging and calm. Deadlines are information, not pressure.
 - Stay age appropriate. Refuse anything harmful, and if a student mentions self harm, bullying or feeling unsafe, kindly tell them to talk to a trusted adult or the school counsellor.
+- TEACHER NOTES come from the student's teachers: follow them (methods, what a test covers, what to avoid) over general knowledge.
+- FEEDBACK lists earlier answers this student rated. Keep doing what the helpful ones did; avoid what made the unhelpful ones unhelpful (for example too long, too vague, or not about their work).
 
 Modes:
 - plan: build a study plan from open tasks (most urgent first) that fits the time the student mentions (90 minutes if they do not say). Fill plan with task ids and minutes, and summarise it in answer.
@@ -63,7 +68,8 @@ How to answer:
 - Help with: who is behind or needs a nudge, what to check first, summarising what students are asking, drafting clear task instructions (what to do, steps, what to hand in, how it is checked), and lesson or feedback ideas.
 - Keep answers short and practical: at most about 150 words, plain sentences, no markdown headings. Short lines starting with "• " are fine for lists of students or steps.
 - Student names and work are confidential: only mention students who appear in the context, and only to this teacher.
-- If the context does not cover the question, answer from general teaching knowledge and say so.`;
+- If the context does not cover the question, answer from general teaching knowledge and say so.
+- TEACHER NOTES are the notes this teacher wrote for their classes; FEEDBACK lists earlier answers they rated. Keep doing what the helpful ones did and avoid what made the unhelpful ones unhelpful.`;
 
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
@@ -299,6 +305,34 @@ export default {
       ].join("\n");
     }
 
+    // Feedback loop: the class notes teachers wrote for Clarion, and this
+    // person's recent ratings, both read as them.
+    const [notesRes, ratingsRes] = await Promise.all([
+      classId
+        ? db.from("class_ai_notes").select("class_id, body, classes(name)").eq("class_id", classId)
+        : db.from("class_ai_notes").select("class_id, body, classes(name)"),
+      db
+        .from("ai_feedback")
+        .select("rating, comment, ai_messages(content)")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(6),
+    ]);
+    const notes: any[] = (notesRes.data ?? []).filter((n: any) => n.body?.trim());
+    const ratings: any[] = ratingsRes.data ?? [];
+    const snippet = (text: string) => text.replace(/\s+/g, " ").slice(0, 220);
+    if (notes.length) {
+      context += `\n\nTEACHER NOTES:\n${notes.map((n) => `- ${n.classes?.name ?? "Class"}: ${snippet(n.body)}`).join("\n")}`;
+    }
+    if (ratings.length) {
+      context += `\n\nFEEDBACK:\n${ratings
+        .map(
+          (f) =>
+            `- ${f.rating > 0 ? "Helpful" : "Not helpful"}: "${snippet(f.ai_messages?.content ?? "")}"${f.comment ? ` (they said: ${snippet(f.comment)})` : ""}`,
+        )
+        .join("\n")}`;
+    }
+
     const contents = [
       ...(history ?? []).reverse().map((m: any) => ({
         role: m.role === "assistant" ? "model" : "user",
@@ -367,11 +401,22 @@ export default {
     const quiz = !staff && mode === "quiz" && parsed.quiz ? { deck: "", front: parsed.quiz.question, back: parsed.quiz.answer } : undefined;
 
     const stored = { sources: uniqueSources, plan: plan ?? null, quiz: quiz ?? null };
-    const { error: replyError } = await ctx.supabaseAdmin
+    const { data: reply, error: replyError } = await ctx.supabaseAdmin
       .from("ai_messages")
-      .insert({ conversation_id: conversationId, role: "assistant", content: parsed.answer.slice(0, 20000), sources: stored });
+      .insert({ conversation_id: conversationId, role: "assistant", content: parsed.answer.slice(0, 20000), sources: stored })
+      .select("id")
+      .single();
     if (replyError) console.error("Could not store reply", replyError.message);
 
-    return json({ conversationId, answer: parsed.answer, sources: uniqueSources, plan: plan ?? null, quiz: quiz ?? null, model: MODEL });
+    // messageId lets the app rate this answer (ai_feedback).
+    return json({
+      conversationId,
+      messageId: reply?.id ?? null,
+      answer: parsed.answer,
+      sources: uniqueSources,
+      plan: plan ?? null,
+      quiz: quiz ?? null,
+      model: MODEL,
+    });
   }),
 };

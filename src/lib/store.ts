@@ -8,7 +8,9 @@ import { createDemoState, DEMO_VERSION } from "./demo-data";
 import { toISODate } from "./dates";
 import { greeting, loadLiveState, NotSignedInError } from "./live/load";
 import { BASE_PATH } from "./routes";
-import { balance } from "./selectors";
+import { itemByKey, type Slot } from "./game/items";
+import { canBuy, equip, levelFor, owns, scrolls, unequip } from "./game/rules";
+import { balance, earnedPoints } from "./selectors";
 import { reply } from "./study-helper";
 import { getSupabase, isSupabaseConfigured } from "./supabase/client";
 import type { AppState, Attachment, ChatMessage, Role, Task, Thread } from "./types";
@@ -580,7 +582,8 @@ export const actions = {
       answer = { id: pendingId, role: "ai", text: message, at: new Date().toISOString(), error: true };
     } else {
       answer = {
-        id: pendingId,
+        // The stored message's id, so the answer can be rated.
+        id: data.messageId ?? pendingId,
         role: "ai",
         text: data.answer,
         at: new Date().toISOString(),
@@ -594,6 +597,35 @@ export const actions = {
       conversationId: data?.conversationId ?? s.conversationId,
       chat: s.chat.map((m) => (m.id === pendingId ? answer : m)),
     }));
+  },
+
+  /** Rate an AI answer helpful (1) or not (-1), with an optional reason; null takes the rating back. */
+  rateAnswer(messageId: string, rating: 1 | -1 | null, comment?: string) {
+    const before = state?.chat.find((m) => m.id === messageId);
+    if (!before) return;
+    setState((s) => ({
+      ...s,
+      chat: s.chat.map((m) =>
+        m.id === messageId ? { ...m, rating: rating ?? undefined, ratingComment: rating === -1 ? (comment ?? m.ratingComment) : undefined } : m,
+      ),
+    }));
+    const feedback = () => getSupabase().from("ai_feedback");
+    void sync(() => {
+      if (rating === null) return feedback().delete().eq("message_id", messageId);
+      if (before.rating) return feedback().update({ rating, comment: comment ?? null }).eq("message_id", messageId);
+      return feedback().insert({ message_id: messageId, rating, comment: comment ?? null });
+    }, "Could not save your rating");
+  },
+
+  /** Teachers: the note Clarion follows for one class. */
+  async saveClassNote(classId: string, body: string): Promise<boolean> {
+    const text = body.trim().slice(0, 2000);
+    setState((s) => ({ ...s, classNotes: { ...s.classNotes, [classId]: text } }));
+    return sync(async () => {
+      const updated = await getSupabase().from("class_ai_notes").update({ body: text }).eq("class_id", classId).select("class_id");
+      if (updated.error || updated.data?.length) return updated;
+      return getSupabase().from("class_ai_notes").insert({ class_id: classId, body: text });
+    }, "Could not save the note");
   },
 
   clearChat() {
@@ -616,6 +648,51 @@ export const actions = {
       redemptions: [...prev.redemptions, { rewardId, at: now.toISOString(), status: reward.needsTeacher ? "requested" : "unlocked" }],
     }));
     void sync(() => getSupabase().rpc("redeem_reward", { target_reward: rewardId }), "Could not redeem that reward");
+    return true;
+  },
+
+  // ── Road to Glory ─────────────────────────────────────────────────────────
+
+  /** Buys gear with gold (points). Returns why it could not, or null when bought. */
+  buyItem(key: string): string | null {
+    const s = state;
+    const item = itemByKey(key);
+    if (!s || !item) return "That item is not for sale";
+    const gold = balance(s);
+    const verdict = canBuy(item, levelFor(earnedPoints(s)), gold, s.hero);
+    if (verdict === "owned") return `You already own the ${item.name}`;
+    if (verdict === "level") return `Reach level ${item.level} to buy the ${item.name}`;
+    if (verdict === "gold") return `You need ${item.price - gold} more gold`;
+    const now = new Date();
+    setState((prev) => ({
+      ...prev,
+      ledger: [...prev.ledger, { id: uid("l"), date: toISODate(now), points: -item.price, label: `Bought ${item.name}`, source: "reward" }],
+      hero: { ...prev.hero, owned: [...prev.hero.owned, key] },
+    }));
+    void sync(() => getSupabase().rpc("buy_hero_item", { item: key }), "Could not buy that");
+    return null;
+  },
+
+  equipItem(key: string) {
+    const item = itemByKey(key);
+    if (!state || !item || !owns(state.hero, item)) return;
+    setState((s) => ({ ...s, hero: equip(s.hero, item) }));
+    void sync(() => getSupabase().rpc("equip_hero_item", { item: key }), "Could not equip that");
+  },
+
+  unequipSlot(slot: Slot) {
+    setState((s) => ({ ...s, hero: unequip(s.hero, slot) }));
+    void sync(() => getSupabase().rpc("unequip_hero_slot", { target_slot: slot }), "Could not take that off");
+  },
+
+  /** Spends a quest scroll on a finished battle. Returns false when there are none left. */
+  recordBattle(monster: string, won: boolean): boolean {
+    if (!state || scrolls(state) <= 0) return false;
+    setState((s) => ({
+      ...s,
+      hero: { ...s.hero, battles: [...s.hero.battles, { id: uid("b"), monster, won, at: new Date().toISOString() }] },
+    }));
+    void sync(() => getSupabase().rpc("record_hero_battle", { monster, won }), "Could not save the battle");
     return true;
   },
 

@@ -1,12 +1,12 @@
 import { addDays, schoolDaysAhead, schoolDaysBack, toISODate, weekdayName } from "./dates";
 import { demoMembers, rosterSize, staffDemo } from "./demo-staff";
-import type { AppState, Attachment, Deck, LedgerEntry, Role, Submission, Task, Thread } from "./types";
+import type { AppState, Attachment, Deck, HeroState, LedgerEntry, Role, Submission, Task, Thread } from "./types";
 
 // Demo content shown until the app is connected to Supabase. Every date is
 // relative to the day the demo is first opened so "Overdue", "Today" and the
 // streak always read correctly.
 
-export const DEMO_VERSION = 3;
+export const DEMO_VERSION = 4;
 
 function hoursAgo(now: Date, h: number): string {
   return new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
@@ -133,6 +133,30 @@ function studentDemo(now: Date): AppState {
     classId,
     source: "task",
   }));
+  // Road to Glory: the demo hero has already bought a squire's kit and fought a little.
+  const kit: [string, string, number][] = [
+    ["shortsword", "Shortsword", 40],
+    ["buckler", "Wooden Buckler", 25],
+    ["leather-cap", "Leather Cap", 20],
+  ];
+  ledger.push(
+    ...kit.map(([, name, price], i) => ({
+      id: `l-kit-${i}`,
+      date: toISODate(schoolDaysBack(today, 6 - i)),
+      points: -price,
+      label: `Bought ${name}`,
+      source: "reward" as const,
+    })),
+  );
+  const hero: HeroState = {
+    owned: kit.map(([key]) => key),
+    equipped: { weapon: "shortsword", offhand: "buckler", head: "leather-cap" },
+    battles: [
+      { id: "b-1", monster: "slime", won: true, at: minutesAgo(now, 60 * 24 * 4) },
+      { id: "b-2", monster: "goblin", won: false, at: minutesAgo(now, 60 * 24 * 3) },
+      { id: "b-3", monster: "goblin", won: true, at: minutesAgo(now, 60 * 24 * 2) },
+    ],
+  };
 
   const threads: Thread[] = [
     {
@@ -429,5 +453,8 @@ function studentDemo(now: Date): AppState {
     classBoards: {},
     schoolOverview: null,
     conversationId: null,
+    hero,
+    classNotes: {},
+    answerFeedback: [],
   };
 }

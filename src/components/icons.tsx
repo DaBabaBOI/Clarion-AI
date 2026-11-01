@@ -54,6 +54,32 @@ export function SparkleIcon(props: IconProps) {
   );
 }
 
+export function ThumbUpIcon(props: IconProps) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M5 7v7H2.5A.5.5 0 0 1 2 13.5v-6a.5.5 0 0 1 .5-.5H5Zm0 0 2.6-4.9a1.2 1.2 0 0 1 2.2.9L9.3 6h3.6a1.3 1.3 0 0 1 1.3 1.5l-.9 5.4a1.3 1.3 0 0 1-1.3 1.1H5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function ThumbDownIcon(props: IconProps) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M5 9V2H2.5a.5.5 0 0 0-.5.5v6a.5.5 0 0 0 .5.5H5Zm0 0 2.6 4.9a1.2 1.2 0 0 0 2.2-.9L9.3 10h3.6a1.3 1.3 0 0 0 1.3-1.5l-.9-5.4A1.3 1.3 0 0 0 12 2H5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function DiscussionsIcon(props: IconProps) {
   return (
     <svg width="18" height="18" viewBox="0 0 18 19" fill="currentColor" aria-hidden="true" {...props}>

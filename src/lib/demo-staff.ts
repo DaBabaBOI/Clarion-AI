@@ -222,6 +222,56 @@ function overview(state: AppState, today: Date, now: Date): ClassOverview[] {
 }
 
 /** Turns the student demo into the same school seen by a teacher or a coordinator. */
+const BIO9_NOTE = "Test on Friday covers cell structure and photosynthesis only. Use the word equation, not the balanced one. Remind them to label diagrams with ruled lines.";
+
+/** Ratings students gave answers in chats about the classes this person teaches. */
+function feedback(classIds: string[], now: Date): AppState["answerFeedback"] {
+  const all: AppState["answerFeedback"] = [
+    {
+      id: "fb-1",
+      rating: -1,
+      comment: "Too long",
+      studentName: "Diya N.",
+      classId: "bio-9",
+      question: "What do I need to know about mitochondria for the test?",
+      answer:
+        "Mitochondria are the site of aerobic respiration. They have a double membrane, an inner membrane folded into cristae, and their own DNA. Respiration releases energy from glucose in a series of reactions, starting with glycolysis in the cytoplasm…",
+      at: hoursAgo(now, 6),
+    },
+    {
+      id: "fb-2",
+      rating: 1,
+      comment: null,
+      studentName: "Ananya R.",
+      classId: "bio-9",
+      question: "Is the word equation enough for photosynthesis?",
+      answer: "Yes. For this test the word equation is enough: carbon dioxide + water → glucose + oxygen, using light energy.",
+      at: hoursAgo(now, 20),
+    },
+    {
+      id: "fb-3",
+      rating: -1,
+      comment: "Not about my work",
+      studentName: "Kabir S.",
+      classId: "eng-9",
+      question: "Can I use the article from class as evidence?",
+      answer: "Good evidence is relevant, reliable and recent. Look for sources from experts and check when they were written.",
+      at: hoursAgo(now, 30),
+    },
+    {
+      id: "fb-4",
+      rating: -1,
+      comment: "Too vague",
+      studentName: "Riya P.",
+      classId: "bio-10",
+      question: "How do I explain the shape of the enzyme graph?",
+      answer: "Enzymes work best at an optimum temperature. Above it the rate changes.",
+      at: hoursAgo(now, 44),
+    },
+  ];
+  return all.filter((f) => f.classId && classIds.includes(f.classId));
+}
+
 export function staffDemo(student: AppState, role: Exclude<Role, "student">, now: Date): AppState {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayISO = toISODate(today);
@@ -330,6 +380,8 @@ export function staffDemo(student: AppState, role: Exclude<Role, "student">, now
     schoolOverview: null,
     showOnLeaderboard: false,
     chat: [],
+    classNotes: role === "teacher" ? { "bio-9": BIO9_NOTE } : {},
+    answerFeedback: feedback(classIds, now),
   };
   if (role === "admin") base.schoolOverview = overview(base, today, now);
 

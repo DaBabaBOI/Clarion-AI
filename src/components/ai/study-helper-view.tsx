@@ -10,6 +10,7 @@ import { actions, useAppState } from "@/lib/store";
 import type { AppState, ChatMessage, Source } from "@/lib/types";
 import { CloseIcon, LogoMark } from "../icons";
 import { Card, CardHeader, Chip, ClassChip, PageHeader, cx, type ChipTone } from "../ui";
+import { RateAnswer, StudentFeedbackCard, canRate } from "./feedback";
 
 const PRIORITY: Record<Priority, { bar: string; chip: ChipTone; label: string; rank: number }> = {
   urgent: { bar: "bg-amber", chip: "amber", label: "Urgent", rank: 0 },
@@ -95,6 +96,7 @@ function Message({ state, message }: { state: AppState; message: ChatMessage }) 
       <p>{message.text}</p>
       {message.plan && <PlanTable state={state} rows={message.plan} />}
       {message.quiz && <QuizBubble key={message.id} quiz={message.quiz} />}
+      {canRate(state, message) && <RateAnswer message={message} />}
     </div>
   );
 }
@@ -340,6 +342,12 @@ export function StudyHelperView() {
               )}
             </div>
           </Card>
+
+          {staff && (
+            <div className="order-5 lg:order-none">
+              <StudentFeedbackCard />
+            </div>
+          )}
 
           <Card className="order-4 flex flex-col gap-3 lg:order-none">
             <h2 className="text-[14.5px] font-bold">Every answer shows its sources</h2>

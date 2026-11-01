@@ -1,8 +1,10 @@
 import { createDemoState } from "../demo-data";
 import { startOfWeek, toISODate } from "../dates";
+import { itemByKey } from "../game/items";
 import { streak, suggestion } from "../selectors";
 import { getSupabase } from "../supabase/client";
 import type {
+  AnswerFeedback,
   AppState,
   Attachment,
   Badge,
@@ -10,6 +12,7 @@ import type {
   ClassColor,
   ClassOverview,
   Deck,
+  HeroState,
   LeaderboardEntry,
   LedgerEntry,
   Member,
@@ -80,6 +83,9 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     chatRes,
     attachmentsRes,
     requestsRes,
+    notesRes,
+    inventoryRes,
+    battlesRes,
   ] = await Promise.all([
     sb.from("profiles").select("full_name, role, year_group, show_on_leaderboard").eq("id", me).single(),
     sb.from("classes").select("id, name, color, join_code").order("name"),
@@ -100,7 +106,7 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     sb.rpc("school_leaderboard"),
     sb
       .from("ai_conversations")
-      .select("id, ai_messages(id, role, content, sources, created_at)")
+      .select("id, ai_messages(id, role, content, sources, created_at, ai_feedback(rating, comment))")
       .eq("user_id", me)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -108,6 +114,10 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     sb.from("task_attachments").select("id, task_id, student_id, kind, title, url, storage_path, mime_type, size_bytes, created_by, created_at").order("created_at"),
     // Staff see the school's open requests; for students this is only their own.
     sb.from("redemptions").select("id, created_at, rewards(title, cost), profiles(full_name)").eq("status", "requested").order("created_at"),
+    sb.from("class_ai_notes").select("class_id, body"),
+    // Road to Glory: only students have rows here.
+    sb.from("hero_inventory").select("item_key, equipped").eq("student_id", me),
+    sb.from("hero_battles").select("id, monster, won, created_at").eq("student_id", me).order("created_at"),
   ]);
 
   const firstError = [profileRes, classesRes, membersRes, tasksRes, subsRes, threadsRes, postsRes, decksRes, ledgerRes, attachmentsRes].find(
@@ -268,6 +278,7 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((m) => {
       const reply = readReply(m.sources);
+      const feedback = m.ai_feedback;
       return {
         id: m.id,
         role: m.role === "assistant" ? "ai" : "user",
@@ -276,8 +287,23 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
         sources: reply.sources,
         plan: reply.plan ?? undefined,
         quiz: reply.quiz ?? undefined,
+        rating: feedback ? (feedback.rating > 0 ? 1 : -1) : undefined,
+        ratingComment: feedback?.comment ?? undefined,
       };
     });
+
+  // Road to Glory: gear owned and worn, and battles fought.
+  const hero: HeroState = {
+    owned: (inventoryRes.data ?? []).map((r) => r.item_key),
+    equipped: Object.fromEntries(
+      (inventoryRes.data ?? [])
+        .filter((r) => r.equipped)
+        .map((r) => [itemByKey(r.item_key)?.slot, r.item_key])
+        .filter(([slot]) => slot),
+    ),
+    battles: (battlesRes.data ?? []).map((b) => ({ id: b.id, monster: b.monster, won: b.won, at: b.created_at })),
+  };
+  const classNotes = Object.fromEntries((notesRes.data ?? []).map((n) => [n.class_id, n.body]));
 
   // Staff extras: reward requests to approve, a leaderboard per class taught and,
   // for coordinators, the school overview.
@@ -291,9 +317,10 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
         at: r.created_at,
       }))
     : [];
-  const [boardResults, overviewRes] = await Promise.all([
+  const [boardResults, overviewRes, answerFeedback] = await Promise.all([
     Promise.all(teachingClassIds.map((id) => sb.rpc("class_leaderboard", { target_class: id }))),
     role === "admin" ? sb.rpc("school_overview") : Promise.resolve(null),
+    staff ? loadAnswerFeedback(me) : Promise.resolve([]),
   ]);
   const classBoards: Record<string, LeaderboardEntry[]> = Object.fromEntries(
     teachingClassIds.map((id, i) => [
@@ -354,6 +381,9 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     classBoards,
     schoolOverview,
     conversationId: conversation?.id ?? null,
+    hero,
+    classNotes,
+    answerFeedback,
   };
 
   state.badges = liveBadges(state, now, (subsRes.data ?? []).filter((s) => s.student_id === me), taskById);
@@ -411,4 +441,40 @@ function liveBadges(
     make({ id: "b-books", title: "Bookworm", description: "Finish five reading tasks.", pattern: "xxxxx..xx..xxxxx", color: "sky", current: reading, target: 5, unit: "books" }),
     make({ id: "b-streak", title: "Streak of 10", description: "Earn verified points ten school days in a row.", pattern: ".xx..xx.xxxx.xx.", color: "brand", current: days, target: 10, unit: "days" }),
   ];
+}
+
+/**
+ * Staff: ratings students gave answers in chats about classes this person
+ * teaches (row level security only returns those), each with the question.
+ */
+async function loadAnswerFeedback(me: string): Promise<AnswerFeedback[]> {
+  const sb = getSupabase();
+  const { data } = await sb
+    .from("ai_feedback")
+    .select("message_id, rating, comment, created_at, ai_messages(content, created_at, conversation_id, ai_conversations(class_id, profiles(full_name)))")
+    .neq("user_id", me)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  const rows = data ?? [];
+  const conversationIds = [...new Set(rows.map((r) => r.ai_messages?.conversation_id).filter((id): id is string => Boolean(id)))];
+  const { data: questions } = conversationIds.length
+    ? await sb.from("ai_messages").select("conversation_id, content, created_at").in("conversation_id", conversationIds).eq("role", "user")
+    : { data: [] };
+  return rows.map((r) => {
+    const answer = r.ai_messages;
+    // The question is the last one asked in that chat before the answer.
+    const question = (questions ?? [])
+      .filter((q) => q.conversation_id === answer?.conversation_id && q.created_at <= (answer?.created_at ?? ""))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    return {
+      id: r.message_id,
+      rating: r.rating > 0 ? 1 : -1,
+      comment: r.comment,
+      studentName: shortName(answer?.ai_conversations?.profiles?.full_name ?? "A student"),
+      classId: answer?.ai_conversations?.class_id ?? null,
+      question: question?.content ?? null,
+      answer: answer?.content ?? "",
+      at: r.created_at,
+    };
+  });
 }

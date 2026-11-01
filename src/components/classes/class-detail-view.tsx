@@ -13,6 +13,7 @@ import { AddTaskModal } from "../tasks/add-task-modal";
 import { ReviewRow } from "../tasks/review-list";
 import { TaskRow } from "../tasks/task-row";
 import { Avatar, Button, CLASS_SWATCH, Card, CardHeader, Chip, EmptyState, TextButton, cx } from "../ui";
+import { ClassNotesCard } from "../ai/feedback";
 import { FlashcardsCard } from "./flashcards";
 
 /** The class page for `?id=`. Keyed so moving between classes starts each one fresh. */
@@ -193,6 +194,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
 
         <div className="flex w-full flex-col gap-5 lg:w-[380px] lg:shrink-0">
           {teaching && <RosterCard cls={cls} students={students} />}
+          {teaching && <ClassNotesCard cls={cls} />}
           <FlashcardsCard decks={decks} onGenerate={generateDeck} />
           {!teaching && (
             <section className="flex flex-col gap-[11px] rounded-card bg-sky-soft px-[18px] py-4">

@@ -56,6 +56,45 @@ export type Database = {
           },
         ]
       }
+      ai_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          message_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          message_id: string
+          rating: number
+          user_id?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          message_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "ai_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_messages: {
         Row: {
           content: string
@@ -87,6 +126,42 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_ai_notes: {
+        Row: {
+          body: string
+          class_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body?: string
+          class_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          class_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_ai_notes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: true
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_ai_notes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -271,6 +346,104 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hero_battles: {
+        Row: {
+          created_at: string
+          id: string
+          monster: string
+          student_id: string
+          won: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monster: string
+          student_id?: string
+          won: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monster?: string
+          student_id?: string
+          won?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hero_battles_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hero_inventory: {
+        Row: {
+          acquired_at: string
+          equipped: boolean
+          item_key: string
+          student_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          equipped?: boolean
+          item_key: string
+          student_id?: string
+        }
+        Update: {
+          acquired_at?: string
+          equipped?: boolean
+          item_key?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hero_inventory_item_key_fkey"
+            columns: ["item_key"]
+            isOneToOne: false
+            referencedRelation: "hero_items"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "hero_inventory_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hero_items: {
+        Row: {
+          key: string
+          level: number
+          name: string
+          price: number
+          slot: string
+          starter: boolean
+          two_handed: boolean
+        }
+        Insert: {
+          key: string
+          level: number
+          name: string
+          price: number
+          slot: string
+          starter?: boolean
+          two_handed?: boolean
+        }
+        Update: {
+          key?: string
+          level?: number
+          name?: string
+          price?: number
+          slot?: string
+          starter?: boolean
+          two_handed?: boolean
+        }
+        Relationships: []
       }
       points_ledger: {
         Row: {
@@ -769,6 +942,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buy_hero_item: { Args: { item: string }; Returns: undefined }
       class_leaderboard: {
         Args: { target_class: string }
         Returns: {
@@ -787,7 +961,12 @@ export type Database = {
           rank: number
         }[]
       }
+      equip_hero_item: { Args: { item: string }; Returns: undefined }
       join_class: { Args: { code: string }; Returns: string }
+      record_hero_battle: {
+        Args: { monster: string; won: boolean }
+        Returns: string
+      }
       redeem_reward: { Args: { target_reward: string }; Returns: string }
       school_leaderboard: {
         Args: never
@@ -815,6 +994,7 @@ export type Database = {
           waiting: number
         }[]
       }
+      unequip_hero_slot: { Args: { target_slot: string }; Returns: undefined }
     }
     Enums: {
       ai_role: "user" | "assistant"

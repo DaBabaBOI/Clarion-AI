@@ -8,7 +8,7 @@ import type { AppState, Reward } from "@/lib/types";
 import { RewardGlyph } from "../icons";
 import { Card, CardHeader, Chip, EmptyState, PageHeader, Segmented, TextButton, cx } from "../ui";
 import { RewardRequestsCard } from "./reward-requests";
-import { BoardRowView } from "./road-to-glory-view";
+import { BoardRowView } from "./board-row";
 
 // Road to Glory for teachers and coordinators. Staff are not ranked, so the
 // page shows how their classes are doing on the road, the rewards waiting

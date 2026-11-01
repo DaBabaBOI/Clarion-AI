@@ -7,6 +7,8 @@
  */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-pixel: var(--font-press-start), ui-monospace, monospace;
+  --font-game: var(--font-pixelify), ui-sans-serif, system-ui, sans-serif;
 
   --color-ink: #14162b;
   --color-muted: #6b7089;
@@ -48,6 +50,22 @@
   --color-silver-soft: #eef1f5;
   --color-bronze: #cd7e41;
   --color-bronze-soft: #fbefe5;
+
+  /* Road to Glory: a night-time pixel RPG screen inside the app. */
+  --color-game-bg: #17132a;
+  --color-game-panel: #261f3d;
+  --color-game-panel-2: #342a52;
+  --color-game-edge: #0d0a18;
+  --color-game-ink: #f3ecdc;
+  --color-game-muted: #a99fc4;
+  --color-game-gold: #ffd23f;
+  --color-game-gold-deep: #a86b00;
+  --color-game-hp: #e8433a;
+  --color-game-xp: #4aa8ff;
+  --color-game-good: #6ee07a;
+  --color-game-bad: #ff7a7a;
+  --color-game-parchment: #f1e3c2;
+  --color-game-parchment-ink: #3b2a14;
 
   --radius-card: 16px;
   --radius-control: 10px;
@@ -101,6 +119,152 @@
 @media (min-width: 1024px) and (max-height: 739px) {
   :root {
     --ui-scale: 0.72;
+  }
+}
+
+/*
+ * Pixel panels: a hard two-pixel frame with notched corners, a light inner
+ * top-left edge and a dark inner bottom-right edge, like an old console menu.
+ */
+@utility pixel-panel {
+  background: var(--color-game-panel);
+  box-shadow:
+    0 -3px 0 0 var(--color-game-edge),
+    0 3px 0 0 var(--color-game-edge),
+    -3px 0 0 0 var(--color-game-edge),
+    3px 0 0 0 var(--color-game-edge),
+    inset 3px 3px 0 0 rgb(255 255 255 / 0.07),
+    inset -3px -3px 0 0 rgb(0 0 0 / 0.25);
+}
+
+@utility pixel-inset {
+  background: var(--color-game-bg);
+  box-shadow:
+    inset 3px 3px 0 0 rgb(0 0 0 / 0.45),
+    inset -3px -3px 0 0 rgb(255 255 255 / 0.05);
+}
+
+/* Chunky game button that presses down. Colour comes from --btn and --btn-deep. */
+@utility pixel-button {
+  --btn: var(--color-game-gold);
+  --btn-deep: var(--color-game-gold-deep);
+  background: var(--btn);
+  box-shadow:
+    0 4px 0 0 var(--btn-deep),
+    0 -2px 0 0 var(--color-game-edge),
+    0 6px 0 0 var(--color-game-edge),
+    -2px 0 0 0 var(--color-game-edge),
+    2px 0 0 0 var(--color-game-edge),
+    inset 2px 2px 0 0 rgb(255 255 255 / 0.35);
+  transition: transform 60ms steps(1);
+  &:not(:disabled):active {
+    transform: translateY(3px);
+    box-shadow:
+      0 1px 0 0 var(--btn-deep),
+      0 -2px 0 0 var(--color-game-edge),
+      0 3px 0 0 var(--color-game-edge),
+      -2px 0 0 0 var(--color-game-edge),
+      2px 0 0 0 var(--color-game-edge);
+  }
+  &:disabled {
+    filter: grayscale(0.8) brightness(0.7);
+  }
+}
+
+@keyframes game-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes game-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes game-float {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -42px);
+  }
+}
+
+@keyframes game-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes game-flash {
+  0%,
+  100% {
+    filter: none;
+  }
+  30% {
+    filter: brightness(3) saturate(0);
+  }
+}
+
+@keyframes game-lunge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(28px);
+  }
+}
+
+@keyframes game-lunge-back {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(-28px);
+  }
+}
+
+@keyframes game-rise {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes game-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
