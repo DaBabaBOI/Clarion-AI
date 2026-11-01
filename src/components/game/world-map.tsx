@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { diceLabel } from "@/lib/game/items";
-import { MONSTERS, REGIONS, monsterByKey, type Monster, type Region } from "@/lib/game/monsters";
+import { REGIONS, monsterByKey, type Monster, type Region } from "@/lib/game/monsters";
 import { heroSprite, monsterSprite } from "@/lib/game/sprites";
 import { sfx } from "@/lib/game/sfx";
 import { MAP_H, MAP_W, paintWorld, regionPoint } from "@/lib/game/world";
@@ -78,7 +78,7 @@ export function WorldMap({
             >
               <span
                 className={cx(
-                  "pixel-panel mb-1 px-1.5 py-1 font-pixel text-[7px] leading-3 whitespace-nowrap",
+                  "pixel-panel mb-1 hidden px-1.5 py-1 font-pixel text-[7px] leading-3 whitespace-nowrap md:inline-block",
                   isSelected ? "text-game-gold" : open ? "text-game-ink" : "text-game-muted",
                 )}
               >
@@ -94,11 +94,32 @@ export function WorldMap({
           );
         })}
         <div
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-[160%] motion-safe:animate-[game-bob_0.9s_steps(2)_infinite]"
-          style={{ left: `${(heroAt.x / MAP_W) * 100 + 3}%`, top: `${(heroAt.y / MAP_H) * 100}%` }}
+          className="pointer-events-none absolute -translate-y-full motion-safe:animate-[game-bob_0.9s_steps(2)_infinite]"
+          style={{ left: `${(heroAt.x / MAP_W) * 100 + 2.5}%`, top: `${(heroAt.y / MAP_H) * 100}%` }}
         >
           <PixelArt grid={heroHead} scale={1.6} title="You are here" />
         </div>
+      </div>
+
+      {/* On small screens the map is too small for labels: pick a region here. */}
+      <div className="flex flex-wrap gap-1.5 md:hidden" role="group" aria-label="Regions">
+        {REGIONS.map((r) => (
+          <button
+            key={r.key}
+            type="button"
+            aria-pressed={r.key === selected.key}
+            onClick={() => {
+              sfx.select();
+              onSelect(r);
+            }}
+            className={cx(
+              "px-2 py-1.5 font-pixel text-[7px] leading-3",
+              r.key === selected.key ? "bg-game-gold text-[#2b1a00]" : level >= r.level ? "bg-game-panel-2 text-game-ink" : "bg-game-panel-2 text-game-muted",
+            )}
+          >
+            {level >= r.level ? r.name : `${r.name} · Lv ${r.level}`}
+          </button>
+        ))}
       </div>
 
       <div className="pixel-inset flex flex-col gap-3 p-3">
@@ -152,4 +173,3 @@ export function WorldMap({
   );
 }
 
-export const ALL_MONSTERS = MONSTERS;

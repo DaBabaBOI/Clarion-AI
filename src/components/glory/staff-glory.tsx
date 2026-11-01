@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useNow } from "@/lib/client-hooks";
+import { MAX_LEVEL, TITLES, levelFor, xpForLevel } from "@/lib/game/rules";
 import { classById, pendingReviews, staffStats } from "@/lib/selectors";
 import { useAppState } from "@/lib/store";
 import type { AppState, Reward } from "@/lib/types";
@@ -53,24 +54,30 @@ function ClassBoardsCard({ state }: { state: AppState }) {
   );
 }
 
-/** The levels students see on their road, and how many of yours have reached each one. */
-function RoadLevelsCard({ state }: { state: AppState }) {
-  const points = state.teachingClassIds.flatMap((id) => (state.classBoards[id] ?? []).map((r) => r.points));
+/** The hero ranks students reach in the game, and how many of yours hold each one. */
+function HeroLevelsCard({ state }: { state: AppState }) {
+  const levels = state.teachingClassIds.flatMap((id) => (state.classBoards[id] ?? []).map((r) => levelFor(r.points)));
+  const top = Math.max(1, ...levels);
+  const bands = TITLES.map(([from, title], i) => ({ from, to: (TITLES[i + 1]?.[0] ?? MAX_LEVEL + 1) - 1, title })).filter((b) => b.from <= top + 1);
+
   return (
     <Card className="flex flex-col gap-3">
-      <CardHeader title="The road students see" small />
+      <CardHeader title="Hero ranks in your classes" small />
+      <p className="text-[12.5px] leading-[18px] text-muted">
+        Road to Glory is a pixel RPG. Points from verified work are gold for gear, and work handed in on time earns quest scrolls for
+        battles. Late work earns half points.
+      </p>
       <ol className="flex flex-col">
-        {state.milestones.map((m, i) => {
-          const next = state.milestones[i + 1];
-          const here = points.filter((p) => p >= m.points && (!next || p < next.points)).length;
+        {bands.map((b) => {
+          const here = levels.filter((l) => l >= b.from && l <= b.to).length;
           return (
-            <li key={m.id} className="flex items-center gap-3 border-t border-line py-2.5 first:border-t-0">
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft text-[11.5px] font-bold text-brand">{i + 1}</span>
+            <li key={b.title} className="flex items-center gap-3 border-t border-line py-2.5 first:border-t-0">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft text-[11.5px] font-bold text-brand">{b.from}</span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold text-ink">
-                  {m.title} <span className="font-normal text-faint">· {m.points} pts</span>
+                <p className="text-[13px] font-semibold text-ink">{b.title}</p>
+                <p className="text-[11.5px] text-faint">
+                  Level {b.from === b.to ? b.from : `${b.from}–${b.to}`} · from {xpForLevel(b.from)} pts
                 </p>
-                <p className="text-[11.5px] text-faint">Unlocks: {m.unlock}</p>
               </div>
               <Chip tone={here ? "brand" : "neutral"}>
                 {here} student{here === 1 ? "" : "s"}
@@ -134,7 +141,7 @@ export function StaffGloryView() {
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           <ClassBoardsCard state={state} />
-          <RoadLevelsCard state={state} />
+          <HeroLevelsCard state={state} />
         </div>
         <div className="flex w-full flex-col gap-5 lg:w-[380px] lg:shrink-0">
           <RewardRequestsCard requests={state.rewardRequests} now={now} />

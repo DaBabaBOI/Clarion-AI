@@ -78,11 +78,13 @@ Google sign-in appears on the sign-in screen automatically once the Google provi
 | `/tasks/view?id=` | One task: instructions, attachments from the teacher, and **Your work**: attach files or links, then hand in (and see it checked) |
 | `/classes` | One card per class: tasks due, new posts, flashcards, next deadline |
 | `/classes/view?id=` | Deadlines, class discussions, flashcard flip and review, "Ask Clarion about this class" |
-| `/ai` | Priority list (urgent → done), chat with study-plan and quiz quick actions, sources card |
+| `/ai` | Priority list (urgent → done), chat with study-plan and quiz quick actions, sources card. Rate each answer 👍 or 👎 |
 | `/discussions` | Searchable, filterable inbox across classes; public and direct threads; reply composer |
-| `/road-to-glory` | Gamification, redesigned (see below) |
+| `/road-to-glory` | A medieval pixel RPG powered by homework (see below) |
 
 The AI helper uses **Gemini** through the `study-helper` Edge Function (`supabase/functions/study-helper`). It runs as the signed-in user: a student's question is answered from only their tasks, flashcards and class posts; a teacher's from the classes they teach (work set, who has handed in, work waiting, student questions). It returns the sources it actually used, stores every exchange for teacher review, and rate-limits to 8 questions a minute. It reads the `GEMINI_API_KEY` secret; set `GEMINI_MODEL` to pin a model (default `gemini-flash-latest`). Redeploy after edits with `supabase functions deploy study-helper --no-verify-jwt` (the function checks the user itself). In demo mode the helper answers offline from `src/lib/study-helper.ts`.
+
+**Feedback loop.** Gemini is not retrained; instead every question carries what the school has told it. Students rate answers helpful or not (with a quick reason: too long, too vague, wrong, not about my work), stored in `ai_feedback`. Teachers write **Notes for Clarion** on the class page (`class_ai_notes`: what the next test covers, the method they teach, what to avoid). The function adds the class notes and the asker's last six ratings to the context, so the next answer follows the teacher and avoids what was unhelpful. Staff see students' ratings on chats about their classes on the AI Helper page, with a link to add a note.
 
 ### Teachers and coordinators
 
@@ -92,9 +94,9 @@ The same screens, with the widgets swapped for the job. The signed-in user's rol
 | --- | --- | --- |
 | Dashboard | To check (handed-in work with its files, Verify or Return), Work you set (who has handed in), the week's deadlines, reward requests, latest student question | School overview: every class with students, due this week, waiting to be checked, missing work, verified this week. Counts only, flagged when work waits 3+ days |
 | Task page | Edit instructions, attach resources, class progress, the to-check list and everyone else's status | |
-| My classes / class page | To-check counts, class code, class list with hand-in counts | |
-| AI Helper | What needs you first, "Who is behind?", "What should I check first?", "Draft instructions" | |
-| Road to Glory | Class leaderboards, approve or decline reward requests, how many students sit at each level | |
+| My classes / class page | To-check counts, class code, class list with hand-in counts, Notes for Clarion | |
+| AI Helper | What needs you first, "Who is behind?", "What should I check first?", "Draft instructions", how students rate answers | |
+| Road to Glory | Class leaderboards, approve or decline reward requests, how many students hold each hero rank | |
 
 The top bar shows "N to check" instead of the streak and points.
 
@@ -102,18 +104,21 @@ The top bar shows "N to check" instead of the streak and points.
 
 Teachers attach files (PDF, images, documents, slides, spreadsheets, audio or video, up to 10 MB) or links to a task. Students attach their own work the same way and hand it in; the teacher sees it next to Verify and Return. Files live in the private `task-files` storage bucket, and a row in `task_attachments` is what grants access to its file, so a student only ever opens the class's resources and their own work. In the demo, added files stay in the browser (up to 750 KB) and the sample PDFs come from `public/demo/`.
 
-### Road to Glory changes
+### Road to Glory: the RPG
 
-Compared with the Figma frame (which followed wireframe 2):
+A medieval, pixel-art role-playing game in the style of classic Zelda, driven entirely by homework:
 
-- **The road**: a level path (Starter → Explorer → Achiever → Scholar → Legend) driven by lifetime verified points, so there is a goal beyond the weekly streak.
-- **Waiting for your teacher**: the anti-gaming rule is shown as a live queue of handed-in work instead of a static info card.
-- **Leaderboard privacy**: a "Show my name" switch; the school board is anonymised.
-- **Spending never lowers rank**: ranks use points earned, the top bar shows points available to spend. Class-affecting rewards wait for teacher approval.
+1. **Hand in homework on time.** Verified work pays its points, which are your **gold**; every point ever earned is **XP**, which sets your level (level 2 at 25 XP, then 25 × (level − 1)²). Each piece handed in by its due date also gives a **quest scroll**. Late work earns half points.
+2. **Gear up at the Blacksmith.** 33 items across weapons, armour, shields, helms and trinkets, with D&D-style stat blocks: damage dice and type, properties (Finesse, Light, Heavy, Two-handed, Versatile), Armour Class, and buffs and debuffs (the Shortsword is nimble but short, the Longsword versatile but slow, the Darksword drains life but curses your AC). Better gear unlocks with levels. Buying shows a "You got the …!" moment, and the hero sprite wears what you equip.
+3. **Fight in the realm.** Five regions on an overworld map, from Greenvale Meadow to the Dragon's Peak, open with levels. Battles are turn based: a d20 plus your bonus against the monster's Armour Class, weapon dice for damage, crits on 20. Attack, Defend, drink a potion or flee. Each battle costs a scroll; a first win earns a title and a trophy.
+
+The real rewards (class game, homework pass) are still there as **Royal favours**, with teacher approval. The Hall of Heroes is the leaderboard, ranked by XP so spending never drops you, with the "Show my name" switch. Chiptune sounds can be switched off.
+
+The rules live in `src/lib/game` (items, rules, monsters, battle engine, pixel art, the world map). The database owns anything that costs points or is limited: `buy_hero_item`, `equip_hero_item`, `unequip_hero_slot` and `record_hero_battle` check gold, level and scrolls on the server.
 
 ## Design tokens
 
-Colours, radii and gradients live in `src/app/globals.css` (`@theme`), taken from the Figma file and the Strand 4 planning table: cool, bright surfaces (`#F7F8FC`, `#EFEDFF`, `#E8F1FF`), brand gradient `#6D5DFB → #3B82F6`, amber `#EF8B09` reserved for urgency. Font: Inter. The logo and sidebar icons use the vector paths exported from Figma (`src/components/icons.tsx`).
+Colours, radii and gradients live in `src/app/globals.css` (`@theme`), taken from the Figma file and the Strand 4 planning table: cool, bright surfaces (`#F7F8FC`, `#EFEDFF`, `#E8F1FF`), brand gradient `#6D5DFB → #3B82F6`, amber `#EF8B09` reserved for urgency. Font: Inter. Road to Glory has its own night-time palette (`--color-game-*`), pixel panels and buttons, and the Press Start 2P and Pixelify Sans fonts. The logo and sidebar icons use the vector paths exported from Figma (`src/components/icons.tsx`).
 
 ## Supabase
 
@@ -129,6 +134,8 @@ The schema is in `supabase/migrations`:
 | `20261017090000_split_write_policies.sql` | **Pending.** Paste it into the Supabase SQL editor, or run `supabase db push`. It only clears a performance advisor warning. |
 | `20261018060717_task_attachments.sql` | Applied. Attachments, the `task-files` bucket, re-handing in returned work |
 | `20261018061057_school_overview.sql` | Applied. The coordinator's `school_overview()` |
+| `20261031045822_ai_feedback.sql` | Applied. Answer ratings and Notes for Clarion |
+| `20261031051647_road_to_glory.sql` | Applied. The armoury, each hero's gear and battles, and half points for late work |
 
 `supabase/seed/task_details.sql` adds instructions and resource links to the test school's work.
 
@@ -138,9 +145,12 @@ What the database enforces, regardless of what the browser does:
 - Attachments: teachers add resources to their classes' work, students add work only to their own hand-ins and only until it is verified. Storage access follows the attachment rows.
 - `school_overview()` only answers coordinators, and only with counts.
 - Personal reminders can never carry points.
+- Late work (handed in after the end of its due day) pays half its points when verified.
+- Road to Glory: only students have a hero; gear is bought only through `buy_hero_item` (level and gold checked, one per item, same lock as rewards); battles only through `record_hero_battle`, which allows three plus one per on-time hand-in. Heroes can only read their own gear and battles.
+- Only the asker can rate an answer; only a class's teachers write its Notes for Clarion, which its members can read.
 - Joining a class goes through `join_class(code)`; spending through `redeem_reward(id)`, which locks per student to stop double spending. Declined requests are refunded.
 - Direct threads are visible only to the author and the class teachers. Class teachers can review AI chats for safety; assistant replies can only be written by the server.
-- Policy helpers live in a `private` schema the API does not expose. The only callable functions are `join_class`, `redeem_reward`, `class_leaderboard`, `classmates_leaderboard`, `school_leaderboard` and `school_overview`.
+- Policy helpers live in a `private` schema the API does not expose. The only callable functions are `join_class`, `redeem_reward`, `class_leaderboard`, `classmates_leaderboard`, `school_leaderboard`, `school_overview` and the four `*_hero_*` functions.
 - `posts` and `threads` are in the realtime publication for live discussions.
 
 Clients live in `src/lib/supabase/` with generated types in `database.types.ts`. `src/lib/live/load.ts` reads everything for the signed-in user and shapes it like the demo data, and `src/lib/store.ts` runs each action against the screen first, then the database, then reloads. New discussion posts arrive over Supabase Realtime.
@@ -152,13 +162,14 @@ src/
   app/                 routes (App Router, Next.js 16)
     (app)/             signed-in area with the top bar + sidebar shell
     sign-in/
-  components/          UI by feature (dashboard, tasks, classes, ai, discussions, glory, shell)
+  components/          UI by feature (dashboard, tasks, classes, ai, discussions, glory, game, shell)
   lib/
     store.ts           store and actions (live or demo)
     live/load.ts       reads the signed-in user's data from Supabase
     demo-data.ts       demo content, relative to today (demo-staff.ts: the teacher and coordinator side)
     selectors.ts       derived numbers shared by every screen
     study-helper.ts    offline stand-in for the AI
+    game/              Road to Glory: items, rules, monsters, battles, pixel art, map, sounds
     supabase/          Supabase clients and generated types
 .github/workflows/     GitHub Pages deploy
 supabase/

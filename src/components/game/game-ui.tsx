@@ -1,4 +1,6 @@
-import type { ComponentProps, ReactNode } from "react";
+"use client";
+
+import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { fromMap, outlined } from "@/lib/game/pixels";
 import { cx } from "../ui";
 import { PixelArt } from "./pixel-art";
@@ -115,5 +117,41 @@ export function Gold({ amount, className }: { amount: number; className?: string
       <GameIcon kind="coin" />
       {amount}
     </span>
+  );
+}
+
+/** A modal in the game's style, on the browser's own dialog (focus, Escape). */
+export function GameDialog({
+  open,
+  onClose,
+  label,
+  width = 460,
+  className,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  label: string;
+  width?: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+  return (
+    <dialog
+      ref={ref}
+      aria-label={label}
+      onClose={onClose}
+      className={cx("pixel-panel m-auto max-h-[calc(var(--screen)-32px)] max-w-[calc(100vw-32px)] p-5 text-game-ink backdrop:bg-[#0d0a18]/80", className)}
+      style={{ width }}
+    >
+      {open && children}
+    </dialog>
   );
 }

@@ -153,8 +153,7 @@ function studentDemo(now: Date): AppState {
     equipped: { weapon: "shortsword", offhand: "buckler", head: "leather-cap" },
     battles: [
       { id: "b-1", monster: "slime", won: true, at: minutesAgo(now, 60 * 24 * 4) },
-      { id: "b-2", monster: "goblin", won: false, at: minutesAgo(now, 60 * 24 * 3) },
-      { id: "b-3", monster: "goblin", won: true, at: minutesAgo(now, 60 * 24 * 2) },
+      { id: "b-2", monster: "goblin", won: true, at: minutesAgo(now, 60 * 24 * 2) },
     ],
   };
 

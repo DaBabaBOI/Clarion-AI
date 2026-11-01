@@ -22,7 +22,8 @@ export function xpForLevel(level: number): number {
   return 25 * (level - 1) ** 2;
 }
 
-const TITLES: [number, string][] = [
+/** Hero titles and the level each starts at. */
+export const TITLES: [number, string][] = [
   [1, "Farmhand"],
   [2, "Squire"],
   [4, "Shield-bearer"],

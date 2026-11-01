@@ -7,8 +7,6 @@
  */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-pixel: var(--font-press-start), ui-monospace, monospace;
-  --font-game: var(--font-pixelify), ui-sans-serif, system-ui, sans-serif;
 
   --color-ink: #14162b;
   --color-muted: #6b7089;
@@ -72,6 +70,15 @@
 
   --shadow-tab: 0 1px 3px 0 rgb(15 18 46 / 0.1);
   --shadow-pop: 0 12px 32px -8px rgb(20 22 43 / 0.18);
+}
+
+/*
+ * Road to Glory's pixel fonts. Inline, so the utilities read the font
+ * variables where the game screen sets them (see components/game/fonts.ts).
+ */
+@theme inline {
+  --font-pixel: var(--font-press-start), ui-monospace, monospace;
+  --font-game: var(--font-pixelify), ui-sans-serif, system-ui, sans-serif;
 }
 
 /*
