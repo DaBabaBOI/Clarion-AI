@@ -130,6 +130,69 @@ export type Database = {
           },
         ]
       }
+      ai_presets: {
+        Row: {
+          active: boolean
+          audience: string
+          description: string
+          instruction: string
+          key: string
+          label: string
+          output: string
+          position: number
+          topic_hint: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          audience: string
+          description?: string
+          instruction: string
+          key: string
+          label: string
+          output?: string
+          position?: number
+          topic_hint?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          audience?: string
+          description?: string
+          instruction?: string
+          key?: string
+          label?: string
+          output?: string
+          position?: number
+          topic_hint?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_settings: {
+        Row: {
+          audience: string
+          model: string
+          prompt: string
+          temperature: number
+          updated_at: string
+        }
+        Insert: {
+          audience: string
+          model?: string
+          prompt: string
+          temperature?: number
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          model?: string
+          prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_ai_notes: {
         Row: {
           body: string

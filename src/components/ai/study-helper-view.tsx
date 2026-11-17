@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { presetsFor } from "@/lib/ai-presets";
 import { useNow } from "@/lib/client-hooks";
 import { diffDays, dueLabel, timeAgo, toISODate } from "@/lib/dates";
 import { taskHref } from "@/lib/routes";
 import { classById, isStaff, pendingReviews, priorityOf, sortTasks, taskProgress, teaches, type Priority } from "@/lib/selectors";
 import { actions, useAppState } from "@/lib/store";
-import type { AppState, ChatMessage, Source } from "@/lib/types";
+import type { AiPresetInfo, AppState, ChatMessage, Source } from "@/lib/types";
 import { CloseIcon, LogoMark } from "../icons";
-import { Card, CardHeader, Chip, ClassChip, PageHeader, cx, type ChipTone } from "../ui";
+import { Button, Card, CardHeader, Chip, ClassChip, PageHeader, cx, type ChipTone } from "../ui";
 import { RateAnswer, StudentFeedbackCard, canRate } from "./feedback";
+import { DeckPreview, McqQuiz } from "./generated";
 
 const PRIORITY: Record<Priority, { bar: string; chip: ChipTone; label: string; rank: number }> = {
   urgent: { bar: "bg-amber", chip: "amber", label: "Urgent", rank: 0 },
@@ -21,16 +24,127 @@ const PRIORITY: Record<Priority, { bar: string; chip: ChipTone; label: string; r
   done: { bar: "bg-faint", chip: "mint", label: "Done", rank: 5 },
 };
 
-const STUDENT_ACTIONS: { label: string; prompt: string; mode: "chat" | "plan" | "quiz" }[] = [
-  { label: "Make a study plan", prompt: "Make me a plan for tonight, I have about 2 hours.", mode: "plan" },
-  { label: "Quiz me", prompt: "Quiz me", mode: "quiz" },
-];
+const OUTPUT_DOT: Record<AiPresetInfo["output"], string> = {
+  flashcards: "bg-sky",
+  quiz: "bg-amber",
+  plan: "bg-mint",
+  chat: "bg-brand",
+};
 
-const STAFF_ACTIONS: typeof STUDENT_ACTIONS = [
-  { label: "Who is behind?", prompt: "Who is behind on their work?", mode: "chat" },
-  { label: "What should I check first?", prompt: "What should I check first?", mode: "chat" },
-  { label: "Draft instructions", prompt: "Help me draft instructions for the next piece of work.", mode: "chat" },
-];
+const RUN_LABEL: Record<AiPresetInfo["output"], string> = {
+  flashcards: "Make the deck",
+  quiz: "Start the quiz",
+  plan: "Plan it",
+  chat: "Ask",
+};
+
+/** Typed requests for a quiz or flashcards go to those functions, so they come back interactive. */
+function presetFromText(text: string, presets: AiPresetInfo[]): { preset: AiPresetInfo; topic: string } | null {
+  const match = text
+    .trim()
+    .match(/^(?:please\s+)?(?:can you\s+)?(quiz me|test me|give me a quiz|make (?:me )?(?:a )?quiz|make (?:me )?(?:some )?flashcards|make (?:me )?a deck|flashcards)(?:\s+(?:on|about|for))?\s*(.*?)[?.!]*$/i);
+  if (!match) return null;
+  const output = /flashcards|deck/i.test(match[1]) ? "flashcards" : "quiz";
+  const preset = presets.find((p) => p.output === output);
+  return preset ? { preset, topic: match[2] } : null;
+}
+
+/** The one-tap functions: pick one, add a topic if it takes one, and go. */
+function PresetBar({
+  presets,
+  disabled,
+  initialKey,
+  canClear,
+}: {
+  presets: AiPresetInfo[];
+  disabled: boolean;
+  initialKey: string | null;
+  canClear: boolean;
+}) {
+  const [active, setActive] = useState<AiPresetInfo | null>(() => presets.find((p) => p.key === initialKey && p.topicHint) ?? null);
+  const [topic, setTopic] = useState("");
+
+  const run = (preset: AiPresetInfo, text: string) => {
+    void actions.runPreset(preset.key, text);
+    setActive(null);
+    setTopic("");
+  };
+  const pick = (preset: AiPresetInfo) => {
+    if (active?.key === preset.key) return setActive(null);
+    if (!preset.topicHint) return run(preset, "");
+    setActive(preset);
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {active && (
+        <form
+          className="rounded-[12px] bg-canvas px-3 py-2.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!disabled) run(active, topic);
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span className={cx("size-2 shrink-0 rounded-[2px]", OUTPUT_DOT[active.output])} aria-hidden="true" />
+            <p className="text-[12.5px] font-bold text-ink">{active.label}</p>
+            <p className="min-w-0 flex-1 truncate text-[11.5px] text-muted">{active.description}</p>
+            <button type="button" onClick={() => setActive(null)} aria-label="Close" className="text-faint hover:text-ink">
+              <CloseIcon width={11} height={11} />
+            </button>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <label htmlFor="preset-topic" className="sr-only">
+              {active.topicHint}
+            </label>
+            <input
+              id="preset-topic"
+              autoFocus
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              maxLength={200}
+              placeholder={active.topicHint}
+              autoComplete="off"
+              className="h-[34px] min-w-0 flex-1 rounded-full border border-line bg-white px-3.5 text-[13px] text-ink placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none"
+            />
+            <Button type="submit" size="xs" pill disabled={disabled} className="h-[34px] px-3.5">
+              {RUN_LABEL[active.output]}
+            </Button>
+          </div>
+        </form>
+      )}
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Clarion functions">
+        {presets.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => pick(p)}
+            disabled={disabled}
+            title={p.description}
+            aria-pressed={active?.key === p.key}
+            className={cx(
+              "flex items-center gap-1.5 rounded-full border px-3 py-[7px] text-[12.5px] font-semibold transition disabled:opacity-50",
+              active?.key === p.key ? "border-brand bg-brand-soft text-brand" : "border-line bg-white text-brand hover:bg-brand-soft",
+            )}
+          >
+            <span className={cx("size-[7px] rounded-[2px]", OUTPUT_DOT[p.output])} aria-hidden="true" />
+            {p.label}
+          </button>
+        ))}
+        {canClear && (
+          <button
+            type="button"
+            onClick={() => actions.clearChat()}
+            disabled={disabled}
+            className="ml-auto rounded-full px-3 py-2 text-[12.5px] font-semibold text-muted hover:text-ink"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const SOURCE_DOT: Record<Source["kind"], string> = {
   task: "bg-mint",
@@ -96,6 +210,8 @@ function Message({ state, message }: { state: AppState; message: ChatMessage }) 
       <p>{message.text}</p>
       {message.plan && <PlanTable state={state} rows={message.plan} />}
       {message.quiz && <QuizBubble key={message.id} quiz={message.quiz} />}
+      {message.deck && <DeckPreview key={`deck-${message.id}`} deck={message.deck} />}
+      {message.mcq && <McqQuiz key={`mcq-${message.id}`} quiz={message.mcq} />}
       {canRate(state, message) && <RateAnswer message={message} />}
     </div>
   );
@@ -171,6 +287,9 @@ export function StudyHelperView() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contextClass = classById(state, state.aiContextClassId);
   const staff = isStaff(state);
+  const presets = presetsFor(state.aiPresets, staff);
+  // "Generate a deck" on a class page opens a function here: /ai?preset=flashcards
+  const initialPreset = useSearchParams().get("preset");
 
   const items = useMemo(() => {
     const relevant = state.tasks.filter(
@@ -181,19 +300,24 @@ export function StudyHelperView() {
     return sortTasks(relevant).sort((a, b) => PRIORITY[priorityOf(a, today)].rank - PRIORITY[priorityOf(b, today)].rank);
   }, [state.tasks, contextClass, today]);
 
+  // New messages scroll into view; a quiz or deck is shown from its start.
+  const last = state.chat[state.chat.length - 1];
+  const tall = Boolean(last && !last.pending && (last.mcq || last.deck));
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [state.chat.length]);
+    const answer = el?.lastElementChild as HTMLElement | null;
+    if (!el) return;
+    el.scrollTo({ top: tall && answer ? answer.offsetTop - 4 : el.scrollHeight, behavior: "smooth" });
+  }, [state.chat.length, last?.id, tall]);
 
   const lastAnswer = [...state.chat].reverse().find((m) => m.role === "ai" && !m.pending);
   const thinking = state.chat.some((m) => m.pending);
 
-  const send = (text: string, mode?: "chat" | "plan" | "quiz") => {
+  const send = (text: string) => {
     if (!text.trim() || thinking) return;
-    const lower = text.toLowerCase();
-    const inferred = mode ?? (/\bplan\b|schedule|tonight/.test(lower) ? "plan" : /quiz|test me/.test(lower) ? "quiz" : "chat");
-    void actions.ask(text, inferred);
+    const asked = presetFromText(text, presets);
+    if (asked) void actions.runPreset(asked.preset.key, asked.topic);
+    else void actions.ask(text, !staff && /\bplan\b|schedule|tonight/i.test(text) ? "plan" : "chat");
     setDraft("");
   };
 
@@ -310,7 +434,7 @@ export function StudyHelperView() {
             </div>
             <div
               ref={scrollRef}
-              className="flex max-h-[min(440px,calc(var(--screen)*0.55))] flex-col gap-3.5 overflow-y-auto pr-0.5"
+              className="relative flex max-h-[min(580px,calc(var(--screen)*0.6))] flex-col gap-3.5 overflow-y-auto pr-0.5"
               aria-live="polite"
               aria-label="Conversation"
             >
@@ -318,29 +442,7 @@ export function StudyHelperView() {
                 <Message key={m.id} state={state} message={m} />
               ))}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {(staff ? STAFF_ACTIONS : STUDENT_ACTIONS).map((a) => (
-                <button
-                  key={a.label}
-                  type="button"
-                  onClick={() => send(a.prompt, a.mode)}
-                  disabled={thinking}
-                  className="rounded-full border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-brand hover:bg-brand-soft disabled:opacity-50"
-                >
-                  {a.label}
-                </button>
-              ))}
-              {state.chat.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => actions.clearChat()}
-                  disabled={thinking}
-                  className="ml-auto rounded-full px-3 py-2 text-[12.5px] font-semibold text-muted hover:text-ink"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+            <PresetBar presets={presets} disabled={thinking} initialKey={initialPreset} canClear={state.chat.length > 1} />
           </Card>
 
           {staff && (

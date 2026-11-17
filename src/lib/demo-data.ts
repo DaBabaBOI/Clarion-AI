@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET_INFO } from "./ai-presets";
 import { addDays, schoolDaysAhead, schoolDaysBack, toISODate, weekdayName } from "./dates";
 import { demoMembers, rosterSize, staffDemo } from "./demo-staff";
 import type { AppState, Attachment, Deck, HeroState, LedgerEntry, Role, Submission, Task, Thread } from "./types";
@@ -6,7 +7,7 @@ import type { AppState, Attachment, Deck, HeroState, LedgerEntry, Role, Submissi
 // relative to the day the demo is first opened so "Overdue", "Today" and the
 // streak always read correctly.
 
-export const DEMO_VERSION = 4;
+export const DEMO_VERSION = 5;
 
 function hoursAgo(now: Date, h: number): string {
   return new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
@@ -455,5 +456,6 @@ function studentDemo(now: Date): AppState {
     hero,
     classNotes: {},
     answerFeedback: [],
+    aiPresets: DEFAULT_PRESET_INFO,
   };
 }

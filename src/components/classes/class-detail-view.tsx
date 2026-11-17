@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { toast, useNow } from "@/lib/client-hooks";
+import { useNow } from "@/lib/client-hooks";
 import { timeAgo, toISODate } from "@/lib/dates";
 import { classById, pendingReviews, roster, sortThreads, sortTasks, teaches, unreadPosts } from "@/lib/selectors";
 import { actions, useAppState } from "@/lib/store";
@@ -90,7 +90,11 @@ export function ClassDetailView({ classId }: { classId: string }) {
     actions.setAiContext(cls.id);
     router.push("/ai");
   };
-  const generateDeck = () => toast("Deck generation switches on once the AI model is connected");
+  // Clarion's flashcards function, focused on this class.
+  const generateDeck = () => {
+    actions.setAiContext(cls.id);
+    router.push(`/ai?preset=${teaching ? "class-flashcards" : "flashcards"}`);
+  };
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -203,7 +207,7 @@ export function ClassDetailView({ classId }: { classId: string }) {
                 <h2 className="text-[13px] font-bold text-brand">Ready to prepare</h2>
               </div>
               <p className="text-[12.5px] leading-[19px] text-muted">
-                Clarion can build a deck from your {cls.name} notes, then check it against {cls.teacher}&apos;s handouts.
+                Clarion can make a deck on any {cls.name} topic for you to flip through, then save it to your flashcards.
               </p>
               <Button variant="secondary" size="sm" full onClick={generateDeck}>
                 Generate a deck

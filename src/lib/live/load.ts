@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET_INFO } from "../ai-presets";
 import { createDemoState } from "../demo-data";
 import { startOfWeek, toISODate } from "../dates";
 import { itemByKey } from "../game/items";
@@ -48,6 +49,8 @@ interface StoredReply {
   sources?: Source[];
   plan?: ChatMessage["plan"] | null;
   quiz?: ChatMessage["quiz"] | null;
+  deck?: ChatMessage["deck"] | null;
+  mcq?: ChatMessage["mcq"] | null;
 }
 
 function readReply(raw: unknown): StoredReply {
@@ -86,6 +89,7 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     notesRes,
     inventoryRes,
     battlesRes,
+    presetsRes,
   ] = await Promise.all([
     sb.from("profiles").select("full_name, role, year_group, show_on_leaderboard").eq("id", me).single(),
     sb.from("classes").select("id, name, color, join_code").order("name"),
@@ -118,6 +122,8 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     // Road to Glory: only students have rows here.
     sb.from("hero_inventory").select("item_key, equipped").eq("student_id", me),
     sb.from("hero_battles").select("id, monster, won, created_at").eq("student_id", me).order("created_at"),
+    // The AI Helper's presets: labels only (the instructions stay on the server).
+    sb.from("ai_presets").select("key, audience, label, description, output, topic_hint").order("position"),
   ]);
 
   const firstError = [profileRes, classesRes, membersRes, tasksRes, subsRes, threadsRes, postsRes, decksRes, ledgerRes, attachmentsRes].find(
@@ -287,6 +293,8 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
         sources: reply.sources,
         plan: reply.plan ?? undefined,
         quiz: reply.quiz ?? undefined,
+        deck: reply.deck ?? undefined,
+        mcq: reply.mcq ?? undefined,
         rating: feedback ? (feedback.rating > 0 ? 1 : -1) : undefined,
         ratingComment: feedback?.comment ?? undefined,
       };
@@ -384,6 +392,17 @@ export async function loadLiveState(prev: AppState | null): Promise<AppState> {
     hero,
     classNotes,
     answerFeedback,
+    // Before the ai_presets table exists (or offline), the built-in presets.
+    aiPresets: presetsRes.error
+      ? DEFAULT_PRESET_INFO
+      : (presetsRes.data ?? []).map((p) => ({
+          key: p.key,
+          audience: p.audience === "staff" ? "staff" : "student",
+          label: p.label,
+          description: p.description,
+          output: (["flashcards", "quiz", "plan"] as const).find((o) => o === p.output) ?? "chat",
+          topicHint: p.topic_hint,
+        })),
   };
 
   state.badges = liveBadges(state, now, (subsRes.data ?? []).filter((s) => s.student_id === me), taskById);
@@ -396,7 +415,7 @@ export function greeting(state: AppState, now: Date): ChatMessage {
   return {
     id: "greeting",
     role: "ai",
-    text: `Hi ${state.student.firstName}. ${tip ? tip.reason : "You are all caught up."} Ask me anything about your classes, or try a study plan or a quiz.`,
+    text: `Hi ${state.student.firstName}. ${tip ? tip.reason : "You are all caught up."} Ask me anything about your classes, or pick a function below: flashcards, a quiz, a study plan and more.`,
     at: now.toISOString(),
   };
 }

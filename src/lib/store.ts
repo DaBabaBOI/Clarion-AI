@@ -10,10 +10,10 @@ import { greeting, loadLiveState, NotSignedInError } from "./live/load";
 import { BASE_PATH } from "./routes";
 import { itemByKey, type Slot } from "./game/items";
 import { canBuy, equip, levelFor, owns, scrolls, unequip } from "./game/rules";
-import { balance, earnedPoints } from "./selectors";
-import { reply } from "./study-helper";
+import { balance, earnedPoints, isStaff, teaches } from "./selectors";
+import { presetReply, reply } from "./study-helper";
 import { getSupabase, isSupabaseConfigured } from "./supabase/client";
-import type { AppState, Attachment, ChatMessage, Role, Task, Thread } from "./types";
+import type { AppState, Attachment, ChatMessage, GeneratedDeck, Role, Task, Thread } from "./types";
 
 // One store, two sources:
 //  • live: Supabase, as the signed-in user. Actions update the screen at once,
@@ -261,6 +261,65 @@ export const auth = {
 };
 
 // ── Actions ─────────────────────────────────────────────────────────────────
+
+/**
+ * One exchange with Clarion: show the question, then the answer. The demo
+ * answers offline; live mode calls the study-helper edge function.
+ */
+async function converse(question: string, body: Record<string, unknown>, offline: (s: AppState, now: Date) => Omit<ChatMessage, "id" | "at">) {
+  if (!state) return;
+  const now = new Date();
+  const user: ChatMessage = { id: uid("m"), role: "user", text: question, at: now.toISOString() };
+
+  if (state.mode === "demo") {
+    setState((s) => {
+      const withUser = { ...s, chat: [...s.chat, user] };
+      const answer: ChatMessage = { ...offline(withUser, now), id: uid("m"), at: now.toISOString() };
+      return { ...withUser, chat: [...withUser.chat, answer] };
+    });
+    return;
+  }
+
+  const pendingId = uid("m");
+  setState((s) => ({
+    ...s,
+    chat: [...s.chat, user, { id: pendingId, role: "ai", text: "", at: now.toISOString(), pending: true }],
+  }));
+
+  const { data, error } = await getSupabase().functions.invoke("study-helper", {
+    body: { ...body, conversationId: state.conversationId, classId: state.aiContextClassId, today: toISODate(now) },
+  });
+
+  let answer: ChatMessage;
+  if (error || !data) {
+    let message = "The AI helper could not answer right now. Try again in a moment.";
+    try {
+      const reason = await (error as { context?: Response })?.context?.json();
+      if (reason?.error) message = reason.error;
+    } catch {
+      // Keep the generic message.
+    }
+    answer = { id: pendingId, role: "ai", text: message, at: new Date().toISOString(), error: true };
+  } else {
+    answer = {
+      // The stored message's id, so the answer can be rated.
+      id: data.messageId ?? pendingId,
+      role: "ai",
+      text: data.answer,
+      at: new Date().toISOString(),
+      sources: data.sources ?? [],
+      plan: data.plan ?? undefined,
+      deck: data.deck ?? undefined,
+      mcq: data.mcq ?? undefined,
+    };
+  }
+  setState((s) => ({
+    ...s,
+    conversationId: data?.conversationId ?? s.conversationId,
+    chat: s.chat.map((m) => (m.id === pendingId ? answer : m)),
+  }));
+}
+
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -545,58 +604,64 @@ export const actions = {
     setState((s) => ({ ...s, aiContextClassId: classId }));
   },
 
-  async ask(text: string, mode: "chat" | "plan" | "quiz" = "chat") {
+  /** Ask Clarion a question in the chat. */
+  async ask(text: string, mode: "chat" | "plan" = "chat") {
     const question = text.trim();
-    if (!question || !state) return;
-    const now = new Date();
-    const user: ChatMessage = { id: uid("m"), role: "user", text: question, at: now.toISOString() };
+    if (!question) return;
+    await converse(question, { message: question, mode }, (s, now) => reply(s, question, now));
+  },
+
+  /** Run one of the AI Helper's preset functions (flashcards, a quiz, a plan...). */
+  async runPreset(key: string, topic = "") {
+    const preset = state?.aiPresets.find((p) => p.key === key);
+    if (!preset) return;
+    const clean = topic.trim().replace(/\s+/g, " ").slice(0, 200);
+    const question = `${preset.label}${clean ? `: ${clean}` : ""}`;
+    await converse(question, { preset: key, topic: clean }, (s, now) => presetReply(s, preset, clean, now));
+  },
+
+  /**
+   * Keep a deck the AI made. Students save it privately in one of their
+   * classes; teachers share it with a class they teach.
+   */
+  async saveGeneratedDeck(deck: GeneratedDeck, classId: string): Promise<boolean> {
+    if (!state) return false;
+    const share = isStaff(state) && teaches(state, classId);
+    const title = deck.title.trim().slice(0, 80) || "Flashcards";
+    const cards = deck.cards.filter((c) => c.front.trim() && c.back.trim()).slice(0, 40);
+    if (!cards.length) return false;
+    const className = state.classes.find((c) => c.id === classId)?.name ?? "the class";
+    const done = () => toast(share ? `Shared with ${className}` : `Saved to your ${className} flashcards`, "success");
 
     if (state.mode === "demo") {
-      setState((s) => {
-        const withUser = { ...s, chat: [...s.chat, user] };
-        const answer: ChatMessage = { ...reply(withUser, question, now), id: uid("m"), at: now.toISOString() };
-        return { ...withUser, chat: [...withUser.chat, answer] };
-      });
-      return;
+      setState((s) => ({
+        ...s,
+        decks: [
+          ...s.decks,
+          { id: uid("deck"), classId, title, reviewed: 0, cards: cards.map((c) => ({ id: uid("card"), front: c.front.slice(0, 500), back: c.back.slice(0, 1000) })) },
+        ],
+      }));
+      done();
+      return true;
     }
 
-    const pendingId = uid("m");
-    setState((s) => ({
-      ...s,
-      chat: [...s.chat, user, { id: pendingId, role: "ai", text: "", at: now.toISOString(), pending: true }],
-    }));
-
-    const { data, error } = await getSupabase().functions.invoke("study-helper", {
-      body: { message: question, mode, conversationId: state.conversationId, classId: state.aiContextClassId, today: toISODate(now) },
-    });
-
-    let answer: ChatMessage;
+    const sb = getSupabase();
+    const { data, error } = await sb.from("flashcard_decks").insert({ class_id: classId, title, shared: share }).select("id").single();
     if (error || !data) {
-      let message = "The AI helper could not answer right now. Try again in a moment.";
-      try {
-        const body = await (error as { context?: Response })?.context?.json();
-        if (body?.error) message = body.error;
-      } catch {
-        // Keep the generic message.
-      }
-      answer = { id: pendingId, role: "ai", text: message, at: new Date().toISOString(), error: true };
-    } else {
-      answer = {
-        // The stored message's id, so the answer can be rated.
-        id: data.messageId ?? pendingId,
-        role: "ai",
-        text: data.answer,
-        at: new Date().toISOString(),
-        sources: data.sources ?? [],
-        plan: data.plan ?? undefined,
-        quiz: data.quiz ?? undefined,
-      };
+      toast(`Could not save the deck${error ? `: ${error.message}` : ""}`);
+      return false;
     }
-    setState((s) => ({
-      ...s,
-      conversationId: data?.conversationId ?? s.conversationId,
-      chat: s.chat.map((m) => (m.id === pendingId ? answer : m)),
-    }));
+    const { error: cardsError } = await sb
+      .from("flashcards")
+      .insert(cards.map((c, i) => ({ deck_id: data.id, front: c.front.slice(0, 500), back: c.back.slice(0, 1000), position: i })));
+    if (cardsError) {
+      await sb.from("flashcard_decks").delete().eq("id", data.id);
+      toast(`Could not save the cards: ${cardsError.message}`);
+      return false;
+    }
+    await refresh();
+    done();
+    return true;
   },
 
   /** Rate an AI answer helpful (1) or not (-1), with an optional reason; null takes the rating back. */

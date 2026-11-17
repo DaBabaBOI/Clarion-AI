@@ -172,13 +172,39 @@ export interface Source {
   label: string;
 }
 
+/** An AI Helper preset as the app sees it (the instruction stays on the server). */
+export interface AiPresetInfo {
+  key: string;
+  audience: "student" | "staff";
+  label: string;
+  description: string;
+  output: "chat" | "flashcards" | "quiz" | "plan";
+  /** Placeholder for the topic box; empty when the preset needs no topic. */
+  topicHint: string;
+}
+
+/** A flashcard deck the AI made, shown in the chat until it is saved. */
+export interface GeneratedDeck {
+  title: string;
+  cards: { front: string; back: string }[];
+}
+
+/** A multiple-choice quiz the AI made; the app marks it as you answer. */
+export interface GeneratedQuiz {
+  title: string;
+  questions: { question: string; options: string[]; correct: number; explanation: string }[];
+}
+
 export interface ChatMessage {
   id: string;
   role: "ai" | "user";
   text: string;
   at: string;
   plan?: PlanRow[];
+  /** Older answers: one flashcard question with its answer. */
   quiz?: { deck: string; front: string; back: string };
+  deck?: GeneratedDeck;
+  mcq?: GeneratedQuiz;
   sources?: Source[];
   pending?: boolean;
   error?: boolean;
@@ -274,4 +300,6 @@ export interface AppState {
   classNotes: Record<string, string>;
   /** Staff only: ratings students gave answers in chats about their classes. */
   answerFeedback: AnswerFeedback[];
+  /** The AI Helper's one-tap functions (from ai_presets in live mode). */
+  aiPresets: AiPresetInfo[];
 }

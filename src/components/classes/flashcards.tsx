@@ -56,6 +56,11 @@ export function FlashcardsCard({ decks, onGenerate }: { decks: Deck[]; onGenerat
       <div className="flex items-center gap-2.5">
         <h2 className="text-[16.5px] font-bold">Flashcards</h2>
         <span className="flex-1" />
+        {decks.length > 0 && (
+          <button type="button" onClick={onGenerate} className="text-[12px] font-semibold text-brand hover:underline underline-offset-2">
+            Make one with Clarion
+          </button>
+        )}
         <Chip tone="neutral">
           {decks.length} deck{decks.length === 1 ? "" : "s"}
         </Chip>
@@ -63,7 +68,7 @@ export function FlashcardsCard({ decks, onGenerate }: { decks: Deck[]; onGenerat
       {!selected || !preview ? (
         <div className="rounded-[14px] bg-canvas px-5 py-6 text-center">
           <p className="text-[13.5px] font-semibold">No decks yet</p>
-          <p className="mt-1 text-[12.5px] text-muted">Clarion can build one from your notes.</p>
+          <p className="mt-1 text-[12.5px] text-muted">Clarion can make one on any topic.</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={onGenerate}>
             Generate a deck
           </Button>

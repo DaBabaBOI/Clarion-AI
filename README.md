@@ -78,11 +78,20 @@ Google sign-in appears on the sign-in screen automatically once the Google provi
 | `/tasks/view?id=` | One task: instructions, attachments from the teacher, and **Your work**: attach files or links, then hand in (and see it checked) |
 | `/classes` | One card per class: tasks due, new posts, flashcards, next deadline |
 | `/classes/view?id=` | Deadlines, class discussions, flashcard flip and review, "Ask Clarion about this class" |
-| `/ai` | Priority list (urgent → done), chat with study-plan and quiz quick actions, sources card. Rate each answer 👍 or 👎 |
+| `/ai` | Priority list (urgent → done), chat, and one-tap **functions**: flashcards, quiz, study plan, explain simply, summarise, test prep. Quizzes mark each answer as you go; decks can be flipped through and saved to a class. Sources card. Rate each answer 👍 or 👎 |
 | `/discussions` | Searchable, filterable inbox across classes; public and direct threads; reply composer |
 | `/road-to-glory` | A medieval pixel RPG powered by homework (see below) |
 
-The AI helper uses **Gemini** through the `study-helper` Edge Function (`supabase/functions/study-helper`). It runs as the signed-in user: a student's question is answered from only their tasks, flashcards and class posts; a teacher's from the classes they teach (work set, who has handed in, work waiting, student questions). It returns the sources it actually used, stores every exchange for teacher review, and rate-limits to 8 questions a minute. It reads the `GEMINI_API_KEY` secret; set `GEMINI_MODEL` to pin a model (default `gemini-flash-latest`). Redeploy after edits with `supabase functions deploy study-helper --no-verify-jwt` (the function checks the user itself). In demo mode the helper answers offline from `src/lib/study-helper.ts`.
+The AI helper uses **Gemini** through the `study-helper` Edge Function (`supabase/functions/study-helper`). It runs as the signed-in user: a student's question is answered from only their tasks, flashcards and class posts; a teacher's from the classes they teach (work set, who has handed in, work waiting, student questions). It returns the sources it actually used, stores every exchange for teacher review, and rate-limits to 8 questions a minute. It reads the `GEMINI_API_KEY` secret. If the model is busy it tries once more, then answers with `GEMINI_FALLBACK_MODEL` (default `gemini-flash-lite-latest`). Redeploy after edits with `supabase functions deploy study-helper --no-verify-jwt` (the function checks the user itself). In demo mode the helper answers offline from `src/lib/study-helper.ts`.
+
+**Editing the agent.** The prompt and the functions live in Supabase, not in code, so a change applies to the next question without a redeploy (Table Editor):
+
+| Table | What to edit |
+| --- | --- |
+| `ai_settings` | One row for `student` and one for `staff`: the `prompt` (who Clarion is and how it answers), the Gemini `model` and the `temperature`. The function adds fixed rules after the prompt (use the context, cite sources, reply in the JSON the app reads), so the app keeps working whatever the prompt says. |
+| `ai_presets` | The one-tap functions. `label` and `description` show in the app; `instruction` is what the model is asked to do with the topic typed in; `output` is `chat`, `flashcards`, `quiz` or `plan`; `topic_hint` is the topic box's placeholder (leave it empty for no topic box); `position` orders them; `active = false` hides one. Add a row to add a function. |
+
+Signed-in users can read the presets' labels, never the prompt or the instructions. Flashcards come back as a deck (2 to 20 cards) a student saves privately to one of their classes, or a teacher shares with a class they teach; quizzes come back as 1 to 10 multiple-choice questions that the app marks, explains, scores, and can turn the missed ones into flashcards. The function checks both shapes before the app sees them. "Generate a deck" on a class page opens the flashcards function for that class.
 
 **Feedback loop.** Gemini is not retrained; instead every question carries what the school has told it. Students rate answers helpful or not (with a quick reason: too long, too vague, wrong, not about my work), stored in `ai_feedback`. Teachers write **Notes for Clarion** on the class page (`class_ai_notes`: what the next test covers, the method they teach, what to avoid). The function adds the class notes and the asker's last six ratings to the context, so the next answer follows the teacher and avoids what was unhelpful. Staff see students' ratings on chats about their classes on the AI Helper page, with a link to add a note.
 
@@ -95,7 +104,7 @@ The same screens, with the widgets swapped for the job. The signed-in user's rol
 | Dashboard | To check (handed-in work with its files, Verify or Return), Work you set (who has handed in), the week's deadlines, reward requests, latest student question | School overview: every class with students, due this week, waiting to be checked, missing work, verified this week. Counts only, flagged when work waits 3+ days |
 | Task page | Edit instructions, attach resources, class progress, the to-check list and everyone else's status | |
 | My classes / class page | To-check counts, class code, class list with hand-in counts, Notes for Clarion | |
-| AI Helper | What needs you first, "Who is behind?", "What should I check first?", "Draft instructions", how students rate answers | |
+| AI Helper | What needs you first; functions for a class quiz, class flashcards (shared with the class in one tap), drafting instructions, who is behind, what to check first and a lesson starter; how students rate answers | |
 | Road to Glory | Class leaderboards, approve or decline reward requests, how many students hold each hero rank | |
 
 The top bar shows "N to check" instead of the streak and points.
@@ -137,6 +146,8 @@ The schema is in `supabase/migrations`:
 | `20261018061057_school_overview.sql` | Applied. The coordinator's `school_overview()` |
 | `20261031045822_ai_feedback.sql` | Applied. Answer ratings and Notes for Clarion |
 | `20261031051647_road_to_glory.sql` | Applied. The armoury, each hero's gear and battles, and half points for late work |
+| `20261117135244_ai_agent.sql` | Applied. The editable agent: `ai_settings` and `ai_presets` |
+| `20261117143652_own_chats_readable.sql` | Applied. Fixes starting a new AI chat (owners read their own chats directly) |
 
 `supabase/seed/task_details.sql` adds instructions and resource links to the test school's work.
 
@@ -149,6 +160,7 @@ What the database enforces, regardless of what the browser does:
 - Late work (handed in after the end of its due day) pays half its points when verified.
 - Road to Glory: only students have a hero; gear is bought only through `buy_hero_item` (level and gold checked, one per item, same lock as rewards); battles only through `record_hero_battle`, which allows three plus one per on-time hand-in. Heroes can only read their own gear and battles.
 - Only the asker can rate an answer; only a class's teachers write its Notes for Clarion, which its members can read.
+- The AI's prompt and preset instructions (`ai_settings`, `ai_presets.instruction`) are readable only by the server; signed-in users see the active presets' labels.
 - Joining a class goes through `join_class(code)`; spending through `redeem_reward(id)`, which locks per student to stop double spending. Declined requests are refunded.
 - Direct threads are visible only to the author and the class teachers. Class teachers can review AI chats for safety; assistant replies can only be written by the server.
 - Policy helpers live in a `private` schema the API does not expose. The only callable functions are `join_class`, `redeem_reward`, `class_leaderboard`, `classmates_leaderboard`, `school_leaderboard`, `school_overview` and the four `*_hero_*` functions.
