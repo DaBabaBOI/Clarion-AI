@@ -19,14 +19,21 @@
 //   rules (FORMAT below) are added after the prompt so the app keeps working
 //   whatever the prompt says.
 // - Needs the GEMINI_API_KEY secret. GEMINI_MODEL is the model to use when
-//   ai_settings does not name one; GEMINI_FALLBACK_MODEL answers when that
-//   model is busy or unavailable.
+//   ai_settings does not name one; when it is busy, GEMINI_FALLBACK_MODEL and
+//   then the other models in FALLBACK_MODELS are tried in turn.
 
 import { withSupabase } from "npm:@supabase/server@1.9.2";
 
 const DEFAULT_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest";
-// Used when the chosen model is busy, down or misnamed in ai_settings.
-const FALLBACK_MODEL = Deno.env.get("GEMINI_FALLBACK_MODEL") ?? "gemini-flash-lite-latest";
+// Tried in order when the chosen model is busy, down or misnamed in
+// ai_settings. The "-latest" names are Google's newest models and the busiest,
+// so the stable 2.5 models come last as a safety net.
+const FALLBACK_MODELS = [
+  Deno.env.get("GEMINI_FALLBACK_MODEL") ?? "gemini-flash-lite-latest",
+  "gemini-flash-latest",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+];
 const MAX_QUESTION = 2000;
 const MAX_TOPIC = 200;
 const MAX_PER_MINUTE = 8;
@@ -504,20 +511,24 @@ export default {
     };
     const busy = (r: Response) => r.status === 429 || r.status >= 500;
 
-    // A model that is busy right away gets one more try; one that is busy or
-    // too slow twice, or missing, hands over to the fallback model.
-    let model = settings.model;
+    // The chosen model gets one more try if it is busy right away. After that,
+    // each fallback model gets one try, while there is time left.
+    const started = Date.now();
+    const models = [...new Set([settings.model, ...FALLBACK_MODELS])];
+    let model = models[0];
     let res = await generate(model, 30_000);
     if (busy(res) && res.status !== 504) {
       await res.body?.cancel();
       await new Promise((resolve) => setTimeout(resolve, 1200));
       res = await generate(model, 25_000);
     }
-    if ((busy(res) || res.status === 404) && FALLBACK_MODEL !== model) {
-      console.error("Gemini", model, res.status, "so trying", FALLBACK_MODEL);
+    for (const next of models.slice(1)) {
+      const left = 120_000 - (Date.now() - started);
+      if (!(busy(res) || res.status === 404) || left < 8_000) break;
+      console.error("Gemini", model, res.status, "so trying", next);
       await res.body?.cancel();
-      model = FALLBACK_MODEL;
-      res = await generate(model, 40_000);
+      model = next;
+      res = await generate(model, Math.min(30_000, left));
     }
 
     if (!res.ok) {
